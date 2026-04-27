@@ -1172,6 +1172,7 @@ nav button:hover:not(.active) { background: var(--panel2); color: var(--text); }
 .supa-save-btn:hover { opacity: .85; }
 .supa-divider { height: 1px; background: var(--supa-border); margin: 6px 0; }
 
+</style>
 </head>
 <body>
 
@@ -1250,7 +1251,7 @@ nav button:hover:not(.active) { background: var(--panel2); color: var(--text); }
         <label>Anon / Public Key</label>
         <input type="text" id="ls-supa-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." autocomplete="off">
       </div>
-      <button class="supa-save-btn" onclick="saveSupaFromLogin()">💾 Αποθήκευση & Σύνδεση</button>
+      <button class="supa-save-btn" onclick="saveSupaFromLogin(this)">💾 Αποθήκευση & Σύνδεση</button>
     </div>
   </div>
 </div>
@@ -3245,7 +3246,7 @@ function toggleSupaSetup(btn) {
   }
 }
 
-async function saveSupaFromLogin() {
+async function saveSupaFromLogin(btn) {
   const url = document.getElementById('ls-supa-url').value.trim();
   const key = document.getElementById('ls-supa-key').value.trim();
   if (!url || !key) {
@@ -3256,7 +3257,6 @@ async function saveSupaFromLogin() {
     showLoginError('⚠️ Το URL πρέπει να ξεκινά με https://');
     return;
   }
-  const btn = event.currentTarget;
   btn.disabled = true;
   btn.textContent = '⏳ Σύνδεση…';
   clearLoginMessages();
@@ -3296,11 +3296,11 @@ function switchLoginTab(tab) {
 function setLoginLoading(btnId, loading) {
   const btn = document.getElementById(btnId);
   if (!btn) return;
+  if (!btn.dataset.label) btn.dataset.label = btn.innerHTML;
   btn.disabled = loading;
   btn.innerHTML = loading
     ? '<span class="spinner"></span> Παρακαλώ περιμένετε…'
-    : btn.dataset.label || btn.innerHTML;
-  if (!loading && !btn.dataset.label) btn.dataset.label = btn.innerHTML;
+    : btn.dataset.label;
 }
 
 function showLoginError(msg) {
