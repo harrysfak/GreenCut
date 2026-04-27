@@ -1102,8 +1102,76 @@ nav button:hover:not(.active) { background: var(--panel2); color: var(--text); }
 }
 .user-drop-item:hover { background: var(--panel2); color: var(--text); }
 .user-drop-item.danger { color: var(--danger); }
-.user-drop-sep { height: 1px; background: var(--border); margin: 4px 0; }
-</style>
+/* ── SUPABASE SETUP PANEL (στο login) ── */
+.supa-setup-toggle {
+  width: 100%;
+  background: var(--supa-bg);
+  border: 1px solid var(--supa-border);
+  color: var(--supa);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 9px 14px;
+  border-radius: 9px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  transition: all .2s;
+  margin-bottom: 0;
+}
+.supa-setup-toggle:hover { background: rgba(62,207,142,.1); }
+.supa-setup-panel {
+  background: var(--supa-bg);
+  border: 1px solid var(--supa-border);
+  border-top: none;
+  border-radius: 0 0 9px 9px;
+  padding: 14px;
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 0;
+}
+.supa-setup-panel.open { display: flex; }
+.supa-setup-panel label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--supa);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  display: block;
+  margin-bottom: 4px;
+  opacity: .8;
+}
+.supa-setup-panel input {
+  width: 100%;
+  background: rgba(0,0,0,.3);
+  border: 1px solid var(--supa-border);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  padding: 8px 11px;
+  border-radius: 7px;
+  outline: none;
+}
+.supa-setup-panel input:focus { border-color: var(--supa); }
+.supa-setup-panel input::placeholder { color: var(--text3); font-size: .78rem; }
+.supa-save-btn {
+  background: var(--supa);
+  color: #061a0e;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 9px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: opacity .2s;
+}
+.supa-save-btn:hover { opacity: .85; }
+.supa-divider { height: 1px; background: var(--supa-border); margin: 6px 0; }
+
 </head>
 <body>
 
@@ -1166,8 +1234,23 @@ nav button:hover:not(.active) { background: var(--panel2); color: var(--text); }
       </button>
     </div>
 
-    <div class="login-footer">
-      Απαιτείται σύνδεση Supabase στις ⚙️ Ρυθμίσεις
+    <div class="supa-divider" style="margin:18px 0 14px"></div>
+
+    <!-- Supabase Quick Setup -->
+    <button class="supa-setup-toggle" onclick="toggleSupaSetup(this)">
+      <span>☁️ Ρύθμιση Supabase</span>
+      <span id="supa-setup-arrow">▾</span>
+    </button>
+    <div class="supa-setup-panel" id="supa-setup-panel">
+      <div>
+        <label>Project URL</label>
+        <input type="url" id="ls-supa-url" placeholder="https://xxxxxxxxxxxx.supabase.co" autocomplete="off">
+      </div>
+      <div>
+        <label>Anon / Public Key</label>
+        <input type="text" id="ls-supa-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." autocomplete="off">
+      </div>
+      <button class="supa-save-btn" onclick="saveSupaFromLogin()">💾 Αποθήκευση & Σύνδεση</button>
     </div>
   </div>
 </div>
@@ -3145,6 +3228,57 @@ function dismissPwaBanner() {
 }
 
 // ════════════════════════════════════════════════════
+// SUPABASE QUICK SETUP (από login screen)
+// ════════════════════════════════════════════════════
+
+function toggleSupaSetup(btn) {
+  const panel = document.getElementById('supa-setup-panel');
+  const arrow = document.getElementById('supa-setup-arrow');
+  const isOpen = panel.classList.toggle('open');
+  arrow.textContent = isOpen ? '▴' : '▾';
+  // Prefill αν υπάρχουν ήδη αποθηκευμένα
+  if (isOpen) {
+    const savedUrl = localStorage.getItem(SUPA_URL_KEY) || '';
+    const savedKey = localStorage.getItem(SUPA_KEY_KEY) || '';
+    document.getElementById('ls-supa-url').value = savedUrl;
+    document.getElementById('ls-supa-key').value = savedKey;
+  }
+}
+
+async function saveSupaFromLogin() {
+  const url = document.getElementById('ls-supa-url').value.trim();
+  const key = document.getElementById('ls-supa-key').value.trim();
+  if (!url || !key) {
+    showLoginError('⚠️ Συμπλήρωσε και τα δύο πεδία Supabase.');
+    return;
+  }
+  if (!url.startsWith('https://')) {
+    showLoginError('⚠️ Το URL πρέπει να ξεκινά με https://');
+    return;
+  }
+  const btn = event.currentTarget;
+  btn.disabled = true;
+  btn.textContent = '⏳ Σύνδεση…';
+  clearLoginMessages();
+
+  const ok = await initSupabase(url, key);
+  btn.disabled = false;
+  btn.textContent = '💾 Αποθήκευση & Σύνδεση';
+
+  if (!ok) {
+    showLoginError('❌ Αδύνατη σύνδεση. Έλεγξε URL και Key.');
+    return;
+  }
+  // Αποθήκευση
+  localStorage.setItem(SUPA_URL_KEY, url);
+  localStorage.setItem(SUPA_KEY_KEY, key);
+  showLoginInfo('✅ Supabase συνδέθηκε! Μπορείς τώρα να κάνεις είσοδο.');
+  // Κλείσε panel
+  document.getElementById('supa-setup-panel').classList.remove('open');
+  document.getElementById('supa-setup-arrow').textContent = '▾';
+}
+
+// ════════════════════════════════════════════════════
 // AUTH — LOGIN / SIGNUP / SIGNOUT
 // ════════════════════════════════════════════════════
 
@@ -3185,7 +3319,7 @@ function clearLoginMessages() {
 }
 
 async function doSignIn() {
-  if (!supabaseClient) { showLoginError('⚠️ Πρώτα ρύθμισε τη σύνδεση Supabase στις ⚙️ Ρυθμίσεις.'); return; }
+  if (!supabaseClient) { showLoginError('⚠️ Πρώτα ρύθμισε τη σύνδεση Supabase παρακάτω (☁️ Ρύθμιση Supabase).'); return; }
   const email = document.getElementById('si-email').value.trim();
   const pass  = document.getElementById('si-pass').value;
   if (!email || !pass) { showLoginError('Συμπλήρωσε email και κωδικό.'); return; }
@@ -3198,7 +3332,7 @@ async function doSignIn() {
 }
 
 async function doSignUp() {
-  if (!supabaseClient) { showLoginError('⚠️ Πρώτα ρύθμισε τη σύνδεση Supabase στις ⚙️ Ρυθμίσεις.'); return; }
+  if (!supabaseClient) { showLoginError('⚠️ Πρώτα ρύθμισε τη σύνδεση Supabase παρακάτω (☁️ Ρύθμιση Supabase).'); return; }
   const email = document.getElementById('su-email').value.trim();
   const pass  = document.getElementById('su-pass').value;
   if (!email || !pass) { showLoginError('Συμπλήρωσε email και κωδικό.'); return; }
@@ -3216,7 +3350,7 @@ async function doSignUp() {
 }
 
 async function doReset() {
-  if (!supabaseClient) { showLoginError('⚠️ Πρώτα ρύθμισε τη σύνδεση Supabase στις ⚙️ Ρυθμίσεις.'); return; }
+  if (!supabaseClient) { showLoginError('⚠️ Πρώτα ρύθμισε τη σύνδεση Supabase παρακάτω (☁️ Ρύθμιση Supabase).'); return; }
   const email = document.getElementById('rs-email').value.trim();
   if (!email) { showLoginError('Συμπλήρωσε το email σου.'); return; }
   setLoginLoading('rs-btn', true);
