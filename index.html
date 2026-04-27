@@ -1,0 +1,3333 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f1a0f">
+<meta name="description" content="GreenCut Pro v2 — Διαχείριση Καθαρισμού Οικοπέδων">
+<title>GreenCut Pro v2</title>
+<link rel="manifest" id="pwa-manifest">
+
+<!-- Leaflet.js -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<!-- Supabase JS v2 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+<style>
+/* ══════════════════════════════════════════════
+   CSS VARIABLES — DARK NATURE THEME
+══════════════════════════════════════════════ */
+:root {
+  --bg:          #0c1a0c;
+  --bg2:         #131f13;
+  --bg3:         #1a2a1a;
+  --panel:       #1f2f1f;
+  --panel2:      #253525;
+  --border:      #2a3d2a;
+  --border2:     #3a5a3a;
+  --accent:      #7ec95e;
+  --accent2:     #4a9c2f;
+  --accent3:     #b8e89a;
+  --accent-dim:  rgba(74,156,47,.15);
+  --warn:        #e8a74a;
+  --warn-bg:     #2a1d08;
+  --warn-border: #4a3510;
+  --danger:      #e85a4a;
+  --danger-bg:   #2a1010;
+  --info:        #4a8fe8;
+  --info-bg:     #0a1830;
+  --info-border: #1a3a6a;
+  --text:        #d8f0d0;
+  --text2:       #98b898;
+  --text3:       #5a8060;
+  --white:       #f0f8ea;
+  --supa:        #3ecf8e; /* Supabase green */
+  --supa-bg:     #061a0e;
+  --supa-border: #0d3a20;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 20px;
+  height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+.logo-icon {
+  width: 34px; height: 34px;
+  background: linear-gradient(135deg, var(--accent2), var(--accent));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem;
+}
+.logo-sub { color: var(--text3); font-weight: 400; font-size: 0.72rem; display: block; letter-spacing: .05em; }
+
+nav {
+  display: flex;
+  gap: 3px;
+  background: var(--bg3);
+  padding: 4px;
+  border-radius: 10px;
+}
+nav button {
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+nav button.active { background: var(--accent2); color: var(--white); }
+nav button:hover:not(.active) { background: var(--panel2); color: var(--text); }
+
+.header-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ── SYNC STATUS BADGE ── */
+#sync-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 20px;
+  cursor: default;
+  transition: all .3s;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+#sync-badge.local   { background: var(--panel2); color: var(--text3);   border-color: var(--border); }
+#sync-badge.online  { background: var(--supa-bg); color: var(--supa);   border-color: var(--supa-border); }
+#sync-badge.syncing { background: var(--info-bg); color: var(--info);    border-color: var(--info-border); animation: pulse .8s ease infinite; }
+#sync-badge.error   { background: var(--danger-bg); color: var(--danger); border-color: #5a2a2a; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+.sync-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  border: none;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  padding: 8px 16px;
+  transition: all .2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-primary  { background: var(--accent2); color: var(--white); }
+.btn-primary:hover  { background: var(--accent); color: #152015; }
+.btn-ghost    { background: var(--panel2); color: var(--text2); border: 1px solid var(--border); }
+.btn-ghost:hover    { background: var(--bg3); color: var(--text); }
+.btn-danger   { background: var(--danger-bg); color: var(--danger); border: 1px solid #5a2a2a; }
+.btn-danger:hover   { background: var(--danger); color: #fff; }
+.btn-warn     { background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn-border); }
+.btn-warn:hover     { background: var(--warn); color: #1a1000; }
+.btn-supa     { background: var(--supa-bg); color: var(--supa); border: 1px solid var(--supa-border); }
+.btn-supa:hover     { background: var(--supa); color: #061a0e; }
+.btn-info     { background: var(--info-bg); color: var(--info); border: 1px solid var(--info-border); }
+.btn-info:hover     { background: var(--info); color: #fff; }
+.btn-sm  { padding: 5px 11px; font-size: 0.78rem; }
+.btn-icon{ padding: 7px; border-radius: 8px; }
+
+/* ── PAGES ── */
+.page { display: none; padding: 20px; max-width: 1440px; margin: 0 auto; }
+.page.active { display: block; }
+
+/* ── STATS BAR ── */
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.stat-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+}
+.stat-card.warn-card  { border-color: var(--warn-border); }
+.stat-card.warn-card::before { background: linear-gradient(90deg, #c07a20, var(--warn)); }
+.stat-card.warn-card .stat-value { color: var(--warn); }
+.stat-card.supa-card  { border-color: var(--supa-border); }
+.stat-card.supa-card::before { background: linear-gradient(90deg, #0a5a30, var(--supa)); }
+.stat-card.supa-card .stat-value { color: var(--supa); }
+
+.stat-label { font-size: 0.72rem; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 5px; }
+.stat-value { font-family: 'Syne', sans-serif; font-size: 1.75rem; font-weight: 700; color: var(--accent3); line-height: 1; }
+.stat-sub   { font-size: 0.72rem; color: var(--text3); margin-top: 3px; }
+
+/* ── TOOLBAR ── */
+.toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 180px;
+}
+.search-wrap input {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+  padding: 8px 12px 8px 34px;
+  border-radius: 8px;
+  outline: none;
+  transition: border .2s;
+}
+.search-wrap input:focus { border-color: var(--accent2); }
+.search-wrap input::placeholder { color: var(--text3); }
+.search-icon {
+  position: absolute;
+  left: 10px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text3);
+  pointer-events: none;
+}
+.filter-select {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
+}
+
+/* ── CLIENT GRID ── */
+.clients-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 14px;
+}
+.client-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  transition: all .2s;
+  cursor: pointer;
+  position: relative;
+}
+.client-card:hover {
+  border-color: var(--accent2);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0,0,0,.45);
+}
+.client-card.pending-reminder { border-color: var(--warn-border); }
+.client-card.pending-reminder::after {
+  content: '🔔 Επανάκαμψη';
+  position: absolute;
+  top: 10px; right: 10px;
+  font-size: 0.63rem;
+  background: var(--warn-bg);
+  color: var(--warn);
+  border: 1px solid var(--warn-border);
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.client-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.client-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 2px;
+}
+.client-phone { font-size: 0.78rem; color: var(--accent); }
+.client-badge {
+  font-size: 0.68rem;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.badge-dense      { background: #2a1d08; color: var(--warn); border: 1px solid var(--warn-border); }
+.badge-medium     { background: #182a18; color: #7ec95e;     border: 1px solid #2a4a2a; }
+.badge-low        { background: #181d2a; color: #7eb3e8;     border: 1px solid #2a3a5a; }
+.badge-gaïdouragka{ background: #2a182a; color: #e87ec9;     border: 1px solid #4a2a4a; }
+.client-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+.info-item { font-size: 0.78rem; }
+.info-label { color: var(--text3); font-size: 0.7rem; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 2px; }
+.info-val   { color: var(--text); font-weight: 500; }
+.client-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+.tag {
+  font-size: 0.68rem;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text3);
+}
+.client-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.client-date { font-size: 0.72rem; color: var(--text3); }
+.card-actions { display: flex; gap: 5px; }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  text-align: center;
+  padding: 70px 20px;
+  color: var(--text3);
+}
+.empty-icon { font-size: 3.5rem; margin-bottom: 14px; opacity: .7; }
+.empty-state h3 { font-family: 'Syne', sans-serif; font-size: 1.15rem; color: var(--text2); margin-bottom: 6px; }
+.empty-state p { font-size: 0.85rem; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.8);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(5px);
+  padding: 16px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 740px;
+  max-height: 92vh;
+  overflow-y: auto;
+  animation: modalIn .22s ease;
+}
+@keyframes modalIn {
+  from { opacity:0; transform:scale(.96) translateY(12px); }
+  to   { opacity:1; transform:scale(1) translateY(0); }
+}
+.modal-header {
+  padding: 22px 22px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  background: var(--bg2);
+  z-index: 1;
+}
+.modal-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--white);
+}
+.modal-close {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  width: 30px; height: 30px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s;
+}
+.modal-close:hover { background: var(--danger); color:#fff; border-color: var(--danger); }
+.modal-body   { padding: 22px; }
+.modal-footer { padding: 14px 22px 22px; display:flex; justify-content:flex-end; gap:10px; }
+
+/* ── FORM ── */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.form-full { grid-column: 1 / -1; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.form-label .req { color: var(--accent); }
+.form-input, .form-select, .form-textarea {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+  padding: 9px 11px;
+  border-radius: 8px;
+  outline: none;
+  transition: border .2s, box-shadow .2s;
+  width: 100%;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--accent2);
+  box-shadow: 0 0 0 3px rgba(74,156,47,.12);
+}
+.form-input::placeholder, .form-textarea::placeholder { color: var(--text3); }
+.form-textarea { resize: vertical; min-height: 78px; }
+.form-hint { font-size: 0.72rem; color: var(--text3); }
+
+.form-section {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.73rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--accent2);
+  margin: 18px 0 2px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.form-section::after { content:''; flex:1; height:1px; background:var(--border); }
+
+.checkbox-group { display:flex; flex-wrap:wrap; gap:7px; }
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 11px;
+  cursor: pointer;
+  transition: all .2s;
+  user-select: none;
+}
+.check-item input { accent-color: var(--accent); }
+.check-item:has(input:checked) {
+  border-color: var(--accent2);
+  background: var(--accent-dim);
+  color: var(--accent3);
+}
+.check-label { font-size: 0.8rem; }
+
+/* Pick map inside modal */
+#pick-map {
+  height: 210px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.map-hint { font-size: 0.72rem; color: var(--text3); margin-top: 4px; }
+
+/* ── PRICE SUGGESTION BANNER ── */
+.price-suggestion {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(74,156,47,.25);
+  border-radius: 8px;
+  padding: 9px 13px;
+  font-size: 0.83rem;
+  color: var(--accent3);
+  flex-wrap: wrap;
+}
+.price-suggestion strong { color: var(--accent); font-size: 1.05rem; }
+
+/* ── PHOTO UPLOAD ── */
+.photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.photo-upload-area {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+  min-height: 95px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.photo-upload-area:hover { border-color: var(--accent2); background: var(--accent-dim); }
+.photo-upload-area input[type=file] {
+  position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%;
+}
+.photo-upload-placeholder { color: var(--text3); font-size: 0.78rem; pointer-events: none; }
+.photo-upload-icon { font-size: 1.8rem; margin-bottom: 5px; display: block; }
+.photo-preview { position: relative; display: none; }
+.photo-preview img {
+  width:100%; height:110px;
+  object-fit:cover; border-radius:8px; display:block;
+}
+.photo-remove {
+  position:absolute; top:4px; right:4px;
+  background:rgba(0,0,0,.75); border:none; color:#fff;
+  border-radius:50%; width:20px; height:20px;
+  font-size:.7rem; cursor:pointer; display:flex; align-items:center; justify-content:center;
+}
+.photo-label {
+  font-size:0.7rem; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--text3); margin-bottom:5px; font-weight:600;
+}
+.photo-comparison { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px; }
+.photo-comp-item { text-align:center; }
+.photo-comp-label { font-size:.66rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text3); margin-bottom:4px; font-weight:600; }
+.photo-comp-item img {
+  width:100%; height:120px; object-fit:cover;
+  border-radius:8px; border:1px solid var(--border);
+  cursor:pointer; transition:transform .2s;
+}
+.photo-comp-item img:hover { transform:scale(1.02); }
+
+/* ── LIGHTBOX ── */
+#photo-lightbox {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,.93); z-index:9000;
+  align-items:center; justify-content:center;
+  backdrop-filter:blur(10px);
+}
+#photo-lightbox.open { display:flex; }
+#photo-lightbox img { max-width:92vw; max-height:92vh; border-radius:8px; }
+#photo-lightbox-close {
+  position:absolute; top:18px; right:18px;
+  background:rgba(255,255,255,.15); border:none; color:#fff;
+  font-size:1.4rem; width:42px; height:42px;
+  border-radius:50%; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+
+/* ── MAP PAGE ── */
+#main-map { height:calc(100vh - 155px); border-radius:14px; overflow:hidden; border:1px solid var(--border); }
+.leaflet-popup-content-wrapper {
+  background:var(--bg2)!important; border:1px solid var(--border)!important;
+  border-radius:10px!important; color:var(--text)!important;
+  font-family:'DM Sans',sans-serif!important; box-shadow:0 8px 32px rgba(0,0,0,.6)!important;
+}
+.leaflet-popup-tip { background:var(--bg2)!important; }
+.popup-name { font-family:'Syne',sans-serif; font-weight:700; font-size:.9rem; color:var(--white); margin-bottom:3px; }
+.popup-info { font-size:.76rem; color:var(--text2); margin-bottom:2px; }
+.popup-sqm  { font-size:1rem; font-weight:700; color:var(--accent); }
+
+/* ── CHARTS PAGE ── */
+.charts-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px;
+}
+.chart-card {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:14px; padding:18px;
+}
+.chart-title {
+  font-family:'Syne',sans-serif; font-size:.82rem; font-weight:700;
+  color:var(--text2); text-transform:uppercase; letter-spacing:.06em; margin-bottom:14px;
+}
+.chart-wrap { position:relative; height:210px; }
+.chart-empty {
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:center; height:100%; color:var(--text3); gap:8px;
+}
+.chart-empty-icon { font-size:2.2rem; opacity:.45; }
+.chart-empty-text { font-size:.8rem; text-align:center; }
+
+/* ── DETAIL PANEL ── */
+.detail-overlay {
+  display:none; position:fixed; inset:0;
+  z-index:1500; background:rgba(0,0,0,.65); backdrop-filter:blur(4px);
+}
+.detail-overlay.open { display:flex; align-items:flex-end; justify-content:flex-end; }
+.detail-panel {
+  width:440px; max-width:100%; height:100vh;
+  background:var(--bg2); border-left:1px solid var(--border);
+  overflow-y:auto; animation:slideIn .22s ease;
+}
+@keyframes slideIn { from{transform:translateX(100%)} to{transform:translateX(0)} }
+.detail-header {
+  background:linear-gradient(135deg,var(--bg3),var(--panel));
+  padding:22px; border-bottom:1px solid var(--border);
+  position:sticky; top:0; z-index:1;
+}
+.detail-body  { padding:22px; }
+.detail-row   { margin-bottom:14px; }
+.detail-label { font-size:.7rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:3px; }
+.detail-val   { font-size:.88rem; color:var(--text); }
+.detail-sqm   { font-family:'Syne',sans-serif; font-size:1.9rem; font-weight:800; color:var(--accent); }
+
+/* ── EXPORT MENU ── */
+.export-opt {
+  display:block; width:100%; background:none; border:none;
+  color:var(--text2); font-family:'DM Sans',sans-serif; font-size:.83rem;
+  padding:10px 15px; text-align:left; cursor:pointer; transition:all .15s;
+}
+.export-opt:hover { background:var(--panel2); color:var(--text); }
+
+/* ══════════════════════════════════════════════
+   SETTINGS MODAL — SUPABASE CONFIGURATION
+══════════════════════════════════════════════ */
+.settings-modal {
+  max-width: 680px;
+}
+
+/* Tab navigation εντός settings */
+.settings-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin: -22px -22px 22px;
+  padding: 0 22px;
+  overflow-x: auto;
+}
+.settings-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text3);
+  font-family: 'DM Sans', sans-serif;
+  font-size: .83rem;
+  font-weight: 500;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
+}
+.settings-tab.active  { color: var(--accent); border-bottom-color: var(--accent); }
+.settings-tab:hover:not(.active) { color: var(--text); }
+
+.settings-pane { display: none; }
+.settings-pane.active { display: block; }
+
+/* Supabase status card */
+.supa-status-card {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.supa-status-icon { font-size: 1.8rem; flex-shrink: 0; }
+.supa-status-text { flex: 1; }
+.supa-status-title { font-weight: 600; font-size: .88rem; margin-bottom: 2px; }
+.supa-status-sub   { font-size: .76rem; color: var(--text3); }
+.supa-status-card.connected { border-color: var(--supa-border); background: var(--supa-bg); }
+.supa-status-card.connected .supa-status-title { color: var(--supa); }
+
+/* SQL schema block */
+.sql-block {
+  background: #080f08;
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-family: 'Courier New', monospace;
+  font-size: .75rem;
+  color: var(--accent3);
+  overflow-x: auto;
+  white-space: pre;
+  line-height: 1.6;
+  margin: 10px 0;
+  position: relative;
+}
+.sql-comment { color: var(--text3); }
+.sql-keyword { color: var(--info); }
+.sql-type    { color: var(--warn); }
+.sql-value   { color: #e87ec9; }
+
+.copy-btn {
+  position: absolute;
+  top: 8px; right: 8px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-size: .72rem;
+  padding: 4px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: all .2s;
+}
+.copy-btn:hover { background: var(--accent2); color: var(--white); border-color: var(--accent2); }
+
+/* Steps */
+.setup-steps { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+.setup-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.step-num {
+  width: 24px; height: 24px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(74,156,47,.3);
+  border-radius: 50%;
+  color: var(--accent);
+  font-size: .75rem;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.step-content { flex: 1; }
+.step-title   { font-weight: 600; font-size: .85rem; color: var(--text); margin-bottom: 3px; }
+.step-desc    { font-size: .78rem; color: var(--text3); line-height: 1.5; }
+.step-desc a  { color: var(--accent); text-decoration: none; }
+.step-desc a:hover { text-decoration: underline; }
+
+/* Input with icon/button */
+.input-group { display: flex; gap: 8px; }
+.input-group .form-input { flex: 1; }
+.key-input { font-family: 'Courier New', monospace; font-size: .82rem; letter-spacing: .03em; }
+
+/* Connection test result */
+.conn-result {
+  display: none;
+  padding: 10px 13px;
+  border-radius: 8px;
+  font-size: .82rem;
+  font-weight: 500;
+  margin-top: 10px;
+  align-items: center;
+  gap: 8px;
+}
+.conn-result.show { display: flex; }
+.conn-result.ok   { background: var(--supa-bg); color: var(--supa);   border: 1px solid var(--supa-border); }
+.conn-result.fail { background: var(--danger-bg); color: var(--danger); border: 1px solid #5a2a2a; }
+
+/* Data migration card */
+.migration-card {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-top: 18px;
+}
+.migration-card h4 { font-family: 'Syne', sans-serif; font-size: .82rem; margin-bottom: 8px; color: var(--text2); }
+.migration-card p  { font-size: .78rem; color: var(--text3); margin-bottom: 10px; line-height: 1.5; }
+
+/* App Info tab */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.info-card {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+}
+.info-card-icon { font-size: 1.7rem; margin-bottom: 7px; }
+.info-card-title { font-family: 'Syne', sans-serif; font-size: .8rem; font-weight: 700; color: var(--text2); margin-bottom: 4px; }
+.info-card-desc  { font-size: .73rem; color: var(--text3); line-height: 1.4; }
+
+/* ── PWA INSTALL BANNER ── */
+#pwa-install-banner {
+  display: none;
+  position: fixed;
+  bottom: 80px; right: 22px;
+  background: var(--panel);
+  border: 1px solid var(--accent2);
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: .83rem;
+  color: var(--text);
+  z-index: 5000;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  max-width: 290px;
+  animation: fadeUp .3s ease;
+  gap: 12px;
+}
+#pwa-install-banner.show { display: flex; align-items: flex-start; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent2); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .stats-bar { grid-template-columns: repeat(3, 1fr); }
+  .info-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 768px) {
+  header { padding: 0 12px; gap: 8px; }
+  .stats-bar { grid-template-columns: 1fr 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
+  .photo-grid { grid-template-columns: 1fr; }
+  nav button span { display: none; }
+  .charts-grid { grid-template-columns: 1fr; }
+  .detail-panel { width: 100%; }
+  #sync-badge span:last-child { display: none; }
+  .info-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .stats-bar { grid-template-columns: 1fr 1fr; }
+  .header-right .btn span { display: none; }
+}
+
+/* ── TOAST ── */
+#toast {
+  position: fixed;
+  bottom: 22px; right: 22px;
+  background: var(--accent2);
+  color: var(--white);
+  padding: 11px 18px;
+  border-radius: 10px;
+  font-size: .85rem;
+  font-weight: 500;
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all .28s;
+  pointer-events: none;
+  max-width: 320px;
+}
+#toast.show { opacity:1; transform:translateY(0); }
+
+/* ── DIVIDER ── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0;
+}
+
+/* ── LOADING SPINNER ── */
+.spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── LOGIN SCREEN ── */
+#login-screen {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+#login-screen.hidden { display: none; }
+.login-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 24px 80px rgba(0,0,0,.6);
+}
+.login-logo {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.login-logo-icon {
+  width: 60px; height: 60px;
+  background: linear-gradient(135deg, var(--accent2), var(--accent));
+  border-radius: 16px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1.8rem;
+  margin-bottom: 12px;
+}
+.login-logo h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+.login-logo p { font-size: 0.8rem; color: var(--text3); margin-top: 3px; }
+.login-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg3);
+  padding: 4px;
+  border-radius: 10px;
+  margin-bottom: 24px;
+}
+.login-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 7px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.login-tab.active { background: var(--accent2); color: var(--white); }
+.login-form { display: flex; flex-direction: column; gap: 14px; }
+.login-form label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  display: block;
+  margin-bottom: 5px;
+}
+.login-form input {
+  width: 100%;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  padding: 10px 13px;
+  border-radius: 9px;
+  outline: none;
+  transition: border .2s, box-shadow .2s;
+}
+.login-form input:focus {
+  border-color: var(--accent2);
+  box-shadow: 0 0 0 3px rgba(74,156,47,.12);
+}
+.login-form input::placeholder { color: var(--text3); }
+.login-submit {
+  width: 100%;
+  background: var(--accent2);
+  color: var(--white);
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 11px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all .2s;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.login-submit:hover:not(:disabled) { background: var(--accent); color: #152015; }
+.login-submit:disabled { opacity: .55; cursor: not-allowed; }
+.login-error {
+  background: var(--danger-bg);
+  border: 1px solid #5a2a2a;
+  color: var(--danger);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 0.82rem;
+  display: none;
+}
+.login-error.show { display: block; }
+.login-info {
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+  color: var(--info);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 0.82rem;
+  display: none;
+}
+.login-info.show { display: block; }
+.login-footer {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text3);
+  margin-top: 20px;
+}
+
+/* ── USER MENU ── */
+#user-menu-wrap { position: relative; }
+#user-btn {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 5px 10px 5px 8px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all .2s;
+  white-space: nowrap;
+  max-width: 160px;
+}
+#user-btn:hover { border-color: var(--accent2); color: var(--text); }
+.user-avatar {
+  width: 22px; height: 22px;
+  background: linear-gradient(135deg, var(--accent2), var(--accent));
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .7rem;
+  color: #fff;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+#user-email-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#user-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  min-width: 180px;
+  z-index: 3000;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+}
+#user-dropdown.open { display: block; }
+.user-drop-item {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.83rem;
+  padding: 10px 15px;
+  text-align: left;
+  cursor: pointer;
+  transition: background .15s;
+}
+.user-drop-item:hover { background: var(--panel2); color: var(--text); }
+.user-drop-item.danger { color: var(--danger); }
+.user-drop-sep { height: 1px; background: var(--border); margin: 4px 0; }
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN SCREEN ══ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-icon">🌿</div>
+      <h1>GreenCut Pro</h1>
+      <p>Διαχείριση Καθαρισμού Οικοπέδων</p>
+    </div>
+
+    <div class="login-tabs">
+      <button class="login-tab active" onclick="switchLoginTab('signin')">Σύνδεση</button>
+      <button class="login-tab" onclick="switchLoginTab('signup')">Εγγραφή</button>
+      <button class="login-tab" onclick="switchLoginTab('reset')">Επαναφορά</button>
+    </div>
+
+    <div class="login-error" id="login-error"></div>
+    <div class="login-info"  id="login-info"></div>
+
+    <!-- SIGN IN -->
+    <div id="tab-signin" class="login-form">
+      <div>
+        <label>Email</label>
+        <input type="email" id="si-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div>
+        <label>Κωδικός</label>
+        <input type="password" id="si-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doSignIn()">
+      </div>
+      <button class="login-submit" id="si-btn" onclick="doSignIn()">
+        <span>Είσοδος</span>
+      </button>
+    </div>
+
+    <!-- SIGN UP -->
+    <div id="tab-signup" class="login-form" style="display:none">
+      <div>
+        <label>Email</label>
+        <input type="email" id="su-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div>
+        <label>Κωδικός (min 6 χαρακτήρες)</label>
+        <input type="password" id="su-pass" placeholder="••••••••" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSignUp()">
+      </div>
+      <button class="login-submit" id="su-btn" onclick="doSignUp()">
+        <span>Δημιουργία Λογαριασμού</span>
+      </button>
+    </div>
+
+    <!-- RESET -->
+    <div id="tab-reset" class="login-form" style="display:none">
+      <div>
+        <label>Email λογαριασμού</label>
+        <input type="email" id="rs-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <button class="login-submit" id="rs-btn" onclick="doReset()">
+        <span>Αποστολή email επαναφοράς</span>
+      </button>
+    </div>
+
+    <div class="login-footer">
+      Απαιτείται σύνδεση Supabase στις ⚙️ Ρυθμίσεις
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP WRAPPER (hidden until logged in) ══ -->
+<div id="app-wrapper" style="display:none">
+<header>
+  <div class="logo">
+    <div class="logo-icon">🌿</div>
+    <div>
+      GreenCut Pro
+      <span class="logo-sub">Διαχείριση Καθαρισμού v2</span>
+    </div>
+  </div>
+
+  <nav>
+    <button id="nav-clients" class="active" onclick="showPage('clients')">
+      👥 <span>Πελάτες</span>
+    </button>
+    <button id="nav-map" onclick="showPage('map')">
+      🗺️ <span>Χάρτης</span>
+    </button>
+    <button id="nav-stats" onclick="showPage('stats')">
+      📊 <span>Στατιστικά</span>
+    </button>
+  </nav>
+
+  <div class="header-right">
+    <!-- Ένδειξη κατάστασης σύνδεσης -->
+    <div id="sync-badge" class="local" title="Κατάσταση αποθήκευσης">
+      <div class="sync-dot"></div>
+      <span id="sync-label">Τοπική αποθήκη</span>
+    </div>
+
+    <!-- Export menu -->
+    <div style="position:relative">
+      <button class="btn btn-ghost btn-sm" onclick="toggleExportMenu(event)">⬇️ <span>Export</span> ▾</button>
+      <div id="export-menu" style="display:none;position:absolute;top:calc(100% + 5px);right:0;background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;min-width:185px;z-index:2000;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+        <button class="export-opt" onclick="exportJSON()">📄 Εξαγωγή JSON</button>
+        <button class="export-opt" onclick="exportCSV()">📊 Εξαγωγή CSV</button>
+        <div style="height:1px;background:var(--border);margin:4px 0"></div>
+        <button class="export-opt" onclick="importTrigger()">📥 Εισαγωγή JSON</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <button class="btn btn-ghost btn-icon" onclick="openSettings()" title="Ρυθμίσεις / Supabase">⚙️</button>
+
+    <!-- User menu -->
+    <div id="user-menu-wrap">
+      <button id="user-btn" onclick="toggleUserMenu(event)">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span id="user-email-label">—</span>
+      </button>
+      <div id="user-dropdown">
+        <div style="padding:10px 15px 6px;font-size:.72rem;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Λογαριασμός</div>
+        <div class="user-drop-sep"></div>
+        <button class="user-drop-item danger" onclick="doSignOut()">🚪 Αποσύνδεση</button>
+      </div>
+    </div>
+
+    <!-- Νέος πελάτης -->
+    <button class="btn btn-primary btn-sm" onclick="openModal()">+ <span>Νέος Πελάτης</span></button>
+  </div>
+</header>
+
+<!-- ══ PAGE: CLIENTS ══ -->
+<div id="page-clients" class="page active">
+  <div class="stats-bar" id="stats-bar"></div>
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" placeholder="Αναζήτηση πελάτη, διεύθυνσης…" oninput="renderClients()">
+    </div>
+    <select class="filter-select" id="filter-veg" onchange="renderClients()">
+      <option value="">Όλες οι βλάστησεις</option>
+      <option value="dense">Πυκνή</option>
+      <option value="medium">Μέτρια</option>
+      <option value="low">Χαμηλή</option>
+      <option value="gaïdouragka">Γαϊδουράγκαθα</option>
+    </select>
+    <select class="filter-select" id="filter-sort" onchange="renderClients()">
+      <option value="date-desc">Πιο πρόσφατα</option>
+      <option value="date-asc">Παλαιότερα</option>
+      <option value="sqm-desc">Μεγαλύτερο εμβαδό</option>
+      <option value="name-asc">Αλφαβητικά</option>
+    </select>
+    <select class="filter-select" id="filter-pending" onchange="renderClients()">
+      <option value="">Όλοι</option>
+      <option value="pending">⏰ Εκκρεμείς</option>
+      <option value="recurring">🔄 Επαναλαμβανόμενοι</option>
+    </select>
+  </div>
+  <div class="clients-grid" id="clients-grid"></div>
+</div>
+
+<!-- ══ PAGE: MAP ══ -->
+<div id="page-map" class="page">
+  <div id="main-map"></div>
+</div>
+
+<!-- ══ PAGE: STATS ══ -->
+<div id="page-stats" class="page">
+  <div class="charts-grid">
+    <div class="chart-card"><div class="chart-title">📋 Βλάστηση ανά κατηγορία</div><div class="chart-wrap" id="wrap-veg"><canvas id="chart-veg"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title">📅 Εργασίες ανά μήνα</div><div class="chart-wrap" id="wrap-monthly"><canvas id="chart-monthly"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title">📐 Εμβαδό ανά εργασία (m²)</div><div class="chart-wrap" id="wrap-sqm"><canvas id="chart-sqm"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title">🏷️ Χαρακτηριστικά οικοπέδων</div><div class="chart-wrap" id="wrap-tags"><canvas id="chart-tags"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ══ MODAL ΠΡΟΣΘΗΚΗΣ/ΕΠΕΞΕΡΓΑΣΙΑΣ ══ -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">➕ Νέος Πελάτης</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-section form-full">👤 Στοιχεία Πελάτη</div>
+        <div class="form-group">
+          <label class="form-label">Ονοματεπώνυμο <span class="req">*</span></label>
+          <input type="text" id="f-name" class="form-input" placeholder="π.χ. Νίκος Παπαδόπουλος">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Τηλέφωνο <span class="req">*</span></label>
+          <input type="tel" id="f-phone" class="form-input" placeholder="π.χ. 6912345678">
+        </div>
+        <div class="form-group form-full">
+          <label class="form-label">Διεύθυνση</label>
+          <input type="text" id="f-address" class="form-input" placeholder="Οδός, Αριθμός, Περιοχή" oninput="geocodeAddress()">
+        </div>
+
+        <div class="form-section form-full">📍 Τοποθεσία</div>
+        <div class="form-full">
+          <div id="pick-map"></div>
+          <p class="map-hint">💡 Κλικ στον χάρτη για πινέζα — ή πληκτρολογήστε διεύθυνση</p>
+          <input type="hidden" id="f-lat">
+          <input type="hidden" id="f-lng">
+        </div>
+
+        <div class="form-section form-full">🌿 Στοιχεία Οικοπέδου</div>
+        <div class="form-group">
+          <label class="form-label">Εμβαδό (m²)</label>
+          <input type="number" id="f-sqm" class="form-input" placeholder="π.χ. 500" min="1" oninput="calculateSuggestedPrice()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ημερομηνία εργασίας</label>
+          <input type="date" id="f-date" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Βλάστηση</label>
+          <select id="f-veg" class="form-select" onchange="calculateSuggestedPrice()">
+            <option value="">— Επιλέξτε —</option>
+            <option value="dense">Πυκνή βλάστηση</option>
+            <option value="medium">Μέτρια βλάστηση</option>
+            <option value="low">Χαμηλή βλάστηση</option>
+            <option value="gaïdouragka">Γαϊδουράγκαθα</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Τιμή (€)</label>
+          <input type="number" id="f-price" class="form-input" placeholder="π.χ. 150" min="0" step="0.01">
+        </div>
+
+        <!-- Banner προτεινόμενης τιμής -->
+        <div id="price-suggestion" class="price-suggestion form-full">
+          💡 Προτεινόμενη τιμή: <strong id="suggested-price-val">—</strong> €
+          <button type="button" onclick="applySuggestedPrice()" class="btn btn-ghost btn-sm">Εφαρμογή ↓</button>
+          <span style="font-size:.72rem;color:var(--text3);flex:1;text-align:right" id="price-formula"></span>
+        </div>
+
+        <div class="form-section form-full">🔄 Επαναλαμβανόμενες Εργασίες</div>
+        <div class="form-group">
+          <label class="form-label">Συχνότητα Καθαρισμού</label>
+          <select id="f-frequency" class="form-select">
+            <option value="0">— Εφάπαξ —</option>
+            <option value="3">Κάθε 3 μήνες</option>
+            <option value="6">Κάθε 6 μήνες</option>
+            <option value="12">Ετήσιο</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Επόμενος προγραμματισμένος</label>
+          <input type="date" id="f-next-date" class="form-input">
+        </div>
+
+        <div class="form-group form-full">
+          <label class="form-label">Χαρακτηριστικά οικοπέδου</label>
+          <div class="checkbox-group">
+            <label class="check-item"><input type="checkbox" value="gaïdouragka"><span class="check-label">🌵 Γαϊδουράγκαθα</span></label>
+            <label class="check-item"><input type="checkbox" value="thamnoi"><span class="check-label">🌿 Θάμνοι</span></label>
+            <label class="check-item"><input type="checkbox" value="agria-chortaria"><span class="check-label">🌾 Άγρια χορτάρια</span></label>
+            <label class="check-item"><input type="checkbox" value="dentra"><span class="check-label">🌳 Δέντρα</span></label>
+            <label class="check-item"><input type="checkbox" value="vrachous"><span class="check-label">🪨 Βράχοι</span></label>
+            <label class="check-item"><input type="checkbox" value="skoupidia"><span class="check-label">🗑️ Σκουπίδια</span></label>
+            <label class="check-item"><input type="checkbox" value="neo-oikopedon"><span class="check-label">🏗️ Νέο οικόπεδο</span></label>
+            <label class="check-item"><input type="checkbox" value="epanakatharizoume"><span class="check-label">🔄 Επαναλαμβανόμενος</span></label>
+          </div>
+        </div>
+
+        <div class="form-section form-full">📸 Φωτογραφίες Εργασίας</div>
+        <div class="form-full">
+          <div class="photo-grid">
+            <div>
+              <div class="photo-label">📷 Πριν</div>
+              <div class="photo-upload-area" onclick="triggerPhotoInput('f-photo-before')">
+                <input type="file" id="f-photo-before" accept="image/*" style="display:none" onchange="handlePhotoUpload(this,'before')">
+                <div class="photo-upload-placeholder" id="before-placeholder">
+                  <span class="photo-upload-icon">📷</span>
+                  <div>Φωτογραφία Πριν</div>
+                  <div style="font-size:.7rem;margin-top:3px">JPG/PNG ≤2MB</div>
+                </div>
+                <div class="photo-preview" id="before-preview">
+                  <img id="before-img" src="" alt="Πριν">
+                  <button type="button" class="photo-remove" onclick="removePhoto(event,'before')">✕</button>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="photo-label">✅ Μετά</div>
+              <div class="photo-upload-area" onclick="triggerPhotoInput('f-photo-after')">
+                <input type="file" id="f-photo-after" accept="image/*" style="display:none" onchange="handlePhotoUpload(this,'after')">
+                <div class="photo-upload-placeholder" id="after-placeholder">
+                  <span class="photo-upload-icon">✅</span>
+                  <div>Φωτογραφία Μετά</div>
+                  <div style="font-size:.7rem;margin-top:3px">JPG/PNG ≤2MB</div>
+                </div>
+                <div class="photo-preview" id="after-preview">
+                  <img id="after-img" src="" alt="Μετά">
+                  <button type="button" class="photo-remove" onclick="removePhoto(event,'after')">✕</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group form-full">
+          <label class="form-label">Σχόλια / Παρατηρήσεις</label>
+          <textarea id="f-notes" class="form-textarea" placeholder="π.χ. Πολύ πυκνή βλάστηση…"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Ακύρωση</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveClient()">💾 Αποθήκευση</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SETTINGS MODAL ══ -->
+<div class="modal-overlay" id="settings-overlay">
+  <div class="modal settings-modal">
+    <div class="modal-header">
+      <div class="modal-title">⚙️ Ρυθμίσεις GreenCut Pro</div>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Tab navigation -->
+      <div class="settings-tabs">
+        <button class="settings-tab active" onclick="switchSettingsTab('supabase',this)">☁️ Supabase</button>
+        <button class="settings-tab" onclick="switchSettingsTab('schema',this)">🗄️ Σχήμα SQL</button>
+        <button class="settings-tab" onclick="switchSettingsTab('data',this)">📦 Δεδομένα</button>
+        <button class="settings-tab" onclick="switchSettingsTab('info',this)">ℹ️ Πληροφορίες</button>
+      </div>
+
+      <!-- ─── TAB: Supabase ─── -->
+      <div class="settings-pane active" id="pane-supabase">
+        <!-- Status card -->
+        <div class="supa-status-card" id="supa-status-card">
+          <div class="supa-status-icon" id="supa-status-icon">💾</div>
+          <div class="supa-status-text">
+            <div class="supa-status-title" id="supa-status-title">Τοπική αποθήκη (localStorage)</div>
+            <div class="supa-status-sub" id="supa-status-sub">Τα δεδομένα αποθηκεύονται μόνο στο browser</div>
+          </div>
+          <button class="btn btn-danger btn-sm" id="supa-disconnect-btn" onclick="disconnectSupabase()" style="display:none">Αποσύνδεση</button>
+        </div>
+
+        <ul class="setup-steps">
+          <li class="setup-step">
+            <span class="step-num">1</span>
+            <div class="step-content">
+              <div class="step-title">Δημιουργία λογαριασμού Supabase</div>
+              <div class="step-desc">Επισκεφθείτε το <a href="https://supabase.com" target="_blank">supabase.com</a> και δημιουργήστε δωρεάν project. Στο dashboard επιλέξτε <strong>Project Settings → API</strong>.</div>
+            </div>
+          </li>
+          <li class="setup-step">
+            <span class="step-num">2</span>
+            <div class="step-content">
+              <div class="step-title">Δημιουργία πίνακα στη βάση δεδομένων</div>
+              <div class="step-desc">Μεταβείτε στην καρτέλα <strong>🗄️ Σχήμα SQL</strong>, αντιγράψτε τον κώδικα και εκτελέστε τον στο <strong>SQL Editor</strong> του Supabase.</div>
+            </div>
+          </li>
+          <li class="setup-step">
+            <span class="step-num">3</span>
+            <div class="step-content">
+              <div class="step-title">Εισαγωγή κλειδιών</div>
+              <div class="step-desc">Επικολλήστε το <strong>Project URL</strong> και το <strong>anon public key</strong> παρακάτω.</div>
+            </div>
+          </li>
+        </ul>
+
+        <div class="divider"></div>
+
+        <div class="form-grid" style="gap:12px">
+          <div class="form-group form-full">
+            <label class="form-label">Project URL</label>
+            <input type="url" id="s-url" class="form-input key-input"
+              placeholder="https://xxxxxxxxxxxxxxxx.supabase.co">
+            <span class="form-hint">Project Settings → API → Project URL</span>
+          </div>
+          <div class="form-group form-full">
+            <label class="form-label">Anon / Public Key</label>
+            <div class="input-group">
+              <input type="password" id="s-key" class="form-input key-input"
+                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…">
+              <button class="btn btn-ghost btn-icon" onclick="toggleKeyVisibility()" title="Εμφάνιση/Απόκρυψη" id="key-toggle-btn">👁️</button>
+            </div>
+            <span class="form-hint">Project Settings → API → Project API Keys → anon public</span>
+          </div>
+        </div>
+
+        <!-- Test + Save actions -->
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+          <button class="btn btn-info btn-sm" onclick="testSupabaseConnection()" id="test-conn-btn">
+            🔌 Δοκιμή Σύνδεσης
+          </button>
+          <button class="btn btn-supa" onclick="saveSupabaseConfig()" id="save-conn-btn">
+            ☁️ Σύνδεση & Συγχρονισμός
+          </button>
+        </div>
+
+        <!-- Connection result -->
+        <div class="conn-result" id="conn-result"></div>
+      </div>
+
+      <!-- ─── TAB: SQL Schema ─── -->
+      <div class="settings-pane" id="pane-schema">
+        <p style="font-size:.83rem;color:var(--text2);margin-bottom:12px;line-height:1.6">
+          Αντιγράψτε τον παρακάτω κώδικα SQL, μεταβείτε στο Supabase Dashboard → <strong>SQL Editor → New query</strong> και εκτελέστε τον (Run).
+        </p>
+
+        <p style="font-size:.75rem;color:var(--text3);margin-bottom:8px">Βήμα 1 από 2 — Κύριος πίνακας δεδομένων:</p>
+        <div class="sql-block" id="sql-schema-block">-- ═══════════════════════════════════════════════════
+-- GreenCut Pro v2 — Optimized Schema  (v2.1)
+-- Εκτελέστε στο: Supabase Dashboard → SQL Editor
+-- ═══════════════════════════════════════════════════
+
+-- [1/2] Κύριος πίνακας πελατών
+-- ───────────────────────────────────────────────────
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+CREATE TABLE IF NOT EXISTS public.clients (
+
+  -- UUID native type: πιο αποδοτικό από TEXT
+  id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  -- Στοιχεία πελάτη
+  name          TEXT        NOT NULL,
+  phone         TEXT,
+  address       TEXT,
+
+  -- Στοιχεία οικοπέδου
+  sqm           NUMERIC,
+  price         NUMERIC(10,2),   -- 2 δεκαδικά για χρηματικά ποσά
+  vegetation    TEXT,
+  work_date     DATE,            -- 'date' είναι δεσμευμένη λέξη SQL
+  notes         TEXT,
+
+  -- NUMERIC για γεωγραφικές συντεταγμένες (όχι TEXT)
+  -- Επιτρέπει μελλοντικούς χωρικούς υπολογισμούς
+  lat           NUMERIC(10,7),
+  lng           NUMERIC(10,7),
+
+  -- Επαναλαμβανόμενες εργασίες
+  frequency     TEXT        NOT NULL DEFAULT '0',
+  next_date     DATE,
+
+  -- JSONB: αποδοτικότερο από JSON για αναζητήσεις
+  tags          JSONB       NOT NULL DEFAULT '[]'::jsonb,
+
+  -- Φωτογραφίες: Base64 (offline) ή Storage URL (cloud)
+  -- Αν χρησιμοποιείτε Supabase Storage, εδώ αποθηκεύετε το URL
+  photo_before  TEXT,
+  photo_after   TEXT
+);
+
+-- Ευρετήρια για απόδοση
+CREATE INDEX IF NOT EXISTS idx_clients_name
+  ON public.clients(name);
+CREATE INDEX IF NOT EXISTS idx_clients_work_date
+  ON public.clients(work_date DESC);
+CREATE INDEX IF NOT EXISTS idx_clients_tags
+  ON public.clients USING GIN(tags);  -- GIN για JSONB αναζητήσεις
+
+-- Trigger: αυτόματη ενημέρωση updated_at
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE TRIGGER clients_updated_at
+  BEFORE UPDATE ON public.clients
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ─── Row Level Security (RLS) ───────────────────────
+ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
+
+-- ΕΠΙΛΟΓΗ Α: Προσωπική χρήση (χωρίς Auth)
+-- Οποιοσδήποτε με το anon key έχει πλήρη πρόσβαση.
+-- Κρατήστε το anon key ΙΔΙΩΤΙΚΟ (μην το δημοσιεύετε).
+CREATE POLICY "anon_full_access"
+  ON public.clients FOR ALL TO anon
+  USING (true) WITH CHECK (true);
+
+-- ΕΠΙΛΟΓΗ Β: Πολλοί χρήστες (με Supabase Auth)
+-- Αντικαταστήστε την παραπάνω policy με αυτή αφού
+-- ενεργοποιήσετε Authentication στο Supabase Dashboard.
+-- CREATE POLICY "auth_user_access"
+--   ON public.clients FOR ALL TO authenticated
+--   USING (true) WITH CHECK (true);</div>
+        <button class="copy-btn" onclick="copySQL()">📋 Αντιγραφή</button>
+
+        <p style="font-size:.75rem;color:var(--text3);margin:14px 0 8px">Βήμα 2 από 2 — Supabase Storage (προαιρετικό, για φωτογραφίες cloud):</p>
+        <div class="sql-block" id="sql-storage-block">-- [2/2] Supabase Storage bucket για φωτογραφίες
+-- Εναλλακτικά αντί για Base64 στη βάση
+-- ───────────────────────────────────────────────────
+
+-- Εκτελέστε αυτό μόνο αν θέλετε cloud αποθήκευση εικόνων.
+-- Μετά ενεργοποιήστε "Supabase Storage" στις Ρυθμίσεις.
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'greencut-photos',
+  'greencut-photos',
+  false,                        -- private bucket
+  3145728,                      -- 3MB max per file
+  ARRAY['image/jpeg','image/png','image/webp']
+) ON CONFLICT (id) DO NOTHING;
+
+-- RLS για storage: μόνο anon/authenticated χρήστες
+CREATE POLICY "storage_anon_read"
+  ON storage.objects FOR SELECT TO anon
+  USING (bucket_id = 'greencut-photos');
+
+CREATE POLICY "storage_anon_write"
+  ON storage.objects FOR INSERT TO anon
+  WITH CHECK (bucket_id = 'greencut-photos');
+
+CREATE POLICY "storage_anon_delete"
+  ON storage.objects FOR DELETE TO anon
+  USING (bucket_id = 'greencut-photos');</div>
+        <button class="copy-btn" onclick="copyStorageSQL()">📋 Αντιγραφή</button>
+
+        <div class="divider"></div>
+
+        <div style="background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:8px;padding:12px 14px;font-size:.78rem;line-height:1.6">
+          <strong style="color:var(--warn)">⚠️ Σημείωση ασφαλείας (RLS):</strong><br>
+          Η <em>Επιλογή Α</em> (anon policy) είναι κατάλληλη για <strong>προσωπική χρήση</strong> — το anon key είναι ημι-δημόσιο, οπότε μην κοινοποιείτε το URL της εφαρμογής.
+          Για <strong>πολλαπλούς χρήστες</strong>, ενεργοποιήστε Supabase Auth και χρησιμοποιήστε την <em>Επιλογή Β</em>.
+        </div>
+      </div>
+
+      <!-- ─── TAB: Δεδομένα ─── -->
+      <div class="settings-pane" id="pane-data">
+
+        <!-- Storage Mode Toggle -->
+        <div class="migration-card" style="border-color:var(--supa-border);background:var(--supa-bg)">
+          <h4 style="color:var(--supa);display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <span>🗂️ Αποθήκευση Φωτογραφιών</span>
+            <!-- Toggle switch -->
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0">
+              <span style="font-size:.75rem;color:var(--text3);font-weight:400">Base64</span>
+              <span style="position:relative;display:inline-block;width:38px;height:20px">
+                <input type="checkbox" id="storage-toggle" onchange="toggleStorageMode(this)"
+                  style="opacity:0;width:0;height:0;position:absolute">
+                <span onclick="document.getElementById('storage-toggle').click()"
+                  style="position:absolute;inset:0;background:var(--border2);border-radius:20px;cursor:pointer;transition:.3s;display:block"
+                  id="storage-toggle-track"></span>
+                <span onclick="document.getElementById('storage-toggle').click()"
+                  style="position:absolute;left:2px;top:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:.3s;pointer-events:none"
+                  id="storage-toggle-thumb"></span>
+              </span>
+              <span style="font-size:.75rem;color:var(--supa);font-weight:400">Storage</span>
+            </label>
+          </h4>
+          <p id="storage-toggle-desc" style="font-size:.78rem;color:var(--text3);margin-bottom:0;line-height:1.5">
+            💾 Ανενεργό — Οι φωτογραφίες αποθηκεύονται ως Base64 απευθείας στη βάση.
+          </p>
+          <div style="margin-top:10px;font-size:.72rem;color:var(--text3);line-height:1.5;border-top:1px solid var(--supa-border);padding-top:8px">
+            <strong style="color:var(--text2)">💡 Πότε να ενεργοποιήσετε το Storage:</strong>
+            Αν αναμένετε >50 πελάτες με φωτογραφίες, το Storage αποτρέπει «φούσκωμα» της βάσης και επιταχύνει τα queries. Απαιτεί εκτέλεση του Storage SQL (καρτέλα 🗄️).
+          </div>
+        </div>
+
+        </div>
+        <div class="migration-card">
+          <h4>📤 Μεταφορά τοπικών δεδομένων → Supabase</h4>
+          <p>Έχετε <strong id="local-count-label">—</strong> πελάτες αποθηκευμένους τοπικά. Ανεβάστε τους στη βάση Supabase για να τους έχετε παντού.</p>
+          <button class="btn btn-supa btn-sm" onclick="migrateToSupabase()" id="migrate-up-btn">☁️ Ανέβασμα στο Supabase</button>
+        </div>
+
+        <div class="migration-card" style="margin-top:12px">
+          <h4>📥 Λήψη δεδομένων Supabase → Τοπικά</h4>
+          <p>Κατεβάστε όλα τα δεδομένα από το Supabase και αποθηκεύστε τα τοπικά (offline backup).</p>
+          <button class="btn btn-info btn-sm" onclick="migrateFromSupabase()" id="migrate-down-btn">💾 Αποθήκευση τοπικά</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="migration-card" style="border-color:var(--warn-border)">
+          <h4 style="color:var(--warn)">⚠️ Επικίνδυνες Ενέργειες</h4>
+          <p>Οι παρακάτω ενέργειες είναι <strong>μη αναστρέψιμες</strong>. Κάντε πρώτα εξαγωγή JSON για backup.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-danger btn-sm" onclick="clearLocalData()">🗑️ Διαγραφή τοπικών</button>
+            <button class="btn btn-danger btn-sm" onclick="clearSupabaseData()">🗑️ Διαγραφή Supabase</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── TAB: Πληροφορίες ─── -->
+      <div class="settings-pane" id="pane-info">
+        <div class="info-grid">
+          <div class="info-card">
+            <div class="info-card-icon">💾</div>
+            <div class="info-card-title">Τοπική αποθήκη</div>
+            <div class="info-card-desc">Χρησιμοποιεί localStorage του browser. Δουλεύει offline. Τα δεδομένα παραμένουν μόνο στη συσκευή σας.</div>
+          </div>
+          <div class="info-card" style="border-color:var(--supa-border)">
+            <div class="info-card-icon">☁️</div>
+            <div class="info-card-title">Supabase (Cloud)</div>
+            <div class="info-card-desc">PostgreSQL cloud database. Συγχρονισμός σε πολλαπλές συσκευές. Δωρεάν tier με 500MB χώρο.</div>
+          </div>
+          <div class="info-card">
+            <div class="info-card-icon">📸</div>
+            <div class="info-card-title">Φωτογραφίες</div>
+            <div class="info-card-desc"><strong style="color:var(--accent3)">Base64 mode:</strong> Αποθηκεύονται απευθείας στη βάση, δουλεύουν offline. <strong style="color:var(--supa)">Storage mode:</strong> Ανεβαίνουν στο Supabase Storage bucket, ελαφρύτερη βάση.</div>
+          </div>
+          <div class="info-card">
+            <div class="info-card-icon">🔄</div>
+            <div class="info-card-title">Smart Reminders</div>
+            <div class="info-card-desc">Αυτόματη ειδοποίηση για πελάτες που πρέπει να ξανακαθαριστούν βάσει συχνότητας.</div>
+          </div>
+          <div class="info-card">
+            <div class="info-card-icon">💡</div>
+            <div class="info-card-title">Αυτόματη Κοστολόγηση</div>
+            <div class="info-card-desc">Τύπος: (m² × Συντελεστής) + 50€ πάγια. Συντελεστές: Χαμηλή 0.10, Μέτρια 0.25, Πυκνή 0.50, Γαϊδουράγκαθα 0.60.</div>
+          </div>
+          <div class="info-card">
+            <div class="info-card-icon">📲</div>
+            <div class="info-card-title">PWA — Offline</div>
+            <div class="info-card-desc">Εγκαταστήσιμο ως εφαρμογή σε κινητό/desktop. Service Worker για χρήση χωρίς internet.</div>
+          </div>
+        </div>
+        <div style="margin-top:16px;text-align:center;font-size:.75rem;color:var(--text3)">
+          GreenCut Pro v2.0 · Dark Nature Theme · Κωδικοποιήθηκε στα Ελληνικά
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DETAIL PANEL ══ -->
+<div class="detail-overlay" id="detail-overlay" onclick="closeDetail(event)">
+  <div class="detail-panel">
+    <div class="detail-header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div>
+          <div id="d-name" style="font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:800;color:var(--white);margin-bottom:3px"></div>
+          <div id="d-phone" style="font-size:.83rem;color:var(--accent)"></div>
+        </div>
+        <button class="modal-close" onclick="closeDetail()">✕</button>
+      </div>
+    </div>
+    <div class="detail-body" id="detail-body"></div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div id="photo-lightbox" onclick="closeLightbox()">
+  <button id="photo-lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<!-- PWA Install Banner -->
+<div id="pwa-install-banner">
+  <span style="font-size:1.4rem;flex-shrink:0">📲</span>
+  <div>
+    <strong style="color:var(--accent);font-size:.85rem">Εγκατάσταση εφαρμογής</strong>
+    <p style="font-size:.75rem;color:var(--text3);margin-top:2px">Offline χρήση στο χωράφι!</p>
+    <div style="display:flex;gap:7px;margin-top:8px">
+      <button class="btn btn-primary btn-sm" id="pwa-install-btn">Εγκατάσταση</button>
+      <button class="btn btn-ghost btn-sm" onclick="dismissPwaBanner()">Όχι τώρα</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+</div><!-- /#app-wrapper -->
+
+<!-- ══════════════════════════════════════════════
+     JAVASCRIPT — ΠΛΗΡΗΣ ΛΟΓΙΚΗ ΕΦΑΡΜΟΓΗΣ
+══════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ════════════════════════════════════════════════════
+// ΣΤΑΘΕΡΕΣ
+// ════════════════════════════════════════════════════
+const STORAGE_KEY       = 'greencut_clients_v2';
+const SUPA_URL_KEY      = 'greencut_supa_url';
+const SUPA_KEY_KEY      = 'greencut_supa_key';
+const SUPA_STORAGE_KEY  = 'greencut_supa_storage'; // 'true' αν χρήση Storage bucket
+const SUPA_TABLE        = 'clients';
+const SUPA_BUCKET       = 'greencut-photos';       // Supabase Storage bucket name
+const FIXED_COSTS       = 50;    // Πάγια έξοδα €
+const PHOTO_MAX_SIZE    = 1200;  // Max px για συμπίεση (Base64 mode)
+const PHOTO_QUALITY     = 0.78;  // JPEG quality
+
+// ════════════════════════════════════════════════════
+// ΚΑΤΑΣΤΑΣΗ ΕΦΑΡΜΟΓΗΣ
+// ════════════════════════════════════════════════════
+let clients         = [];
+let editingId       = null;
+let pickMap         = null, pickMarker = null;
+let mainMap         = null, mainMapInited = false;
+let vegChart=null, monthlyChart=null, sqmChart=null, tagsChart=null;
+let tempPhotoBefore = null, tempPhotoAfter = null;
+let supabaseClient  = null;   // Supabase client instance (null = χρήση localStorage)
+let isSyncing       = false;  // Αποτρέπει διπλούς συγχρονισμούς
+
+// ════════════════════════════════════════════════════
+// ΛΕΞΙΛΟΓΙΑ
+// ════════════════════════════════════════════════════
+const vegLabels = {
+  dense:'Πυκνή', medium:'Μέτρια', low:'Χαμηλή',
+  'gaïdouragka':'Γαϊδουράγκαθα', '':'—'
+};
+const vegBadge = {
+  dense:'badge-dense', medium:'badge-medium',
+  low:'badge-low', 'gaïdouragka':'badge-gaïdouragka'
+};
+const tagLabels = {
+  'gaïdouragka':'🌵 Γαϊδουράγκαθα',
+  thamnoi:'🌿 Θάμνοι',
+  'agria-chortaria':'🌾 Άγρια χορτάρια',
+  dentra:'🌳 Δέντρα',
+  vrachous:'🪨 Βράχοι',
+  skoupidia:'🗑️ Σκουπίδια',
+  'neo-oikopedon':'🏗️ Νέο οικόπεδο',
+  epanakatharizoume:'🔄 Επαναλαμβανόμενος'
+};
+const vegCoefficients = { low:0.10, medium:0.25, dense:0.50, 'gaïdouragka':0.60 };
+const freqMap = { '0':'Εφάπαξ', '3':'Κάθε 3 μήνες', '6':'Κάθε 6 μήνες', '12':'Ετήσιο' };
+
+// ════════════════════════════════════════════════════
+// SUPABASE — CLIENT & INITIALIZATION
+// ════════════════════════════════════════════════════
+
+/**
+ * Αρχικοποίηση Supabase client από αποθηκευμένα διαπιστευτήρια.
+ * Επιστρέφει true αν συνδέθηκε επιτυχώς.
+ */
+async function initSupabase(url, key) {
+  try {
+    if (!window.supabase || !url || !key) return false;
+    supabaseClient = window.supabase.createClient(url.trim(), key.trim());
+    // Δοκιμαστικό query για επιβεβαίωση σύνδεσης
+    const { error } = await supabaseClient.from(SUPA_TABLE).select('id').limit(1);
+    if (error) { supabaseClient = null; return false; }
+    return true;
+  } catch(e) {
+    supabaseClient = null;
+    return false;
+  }
+}
+
+/**
+ * Μετατρέπει εγγραφή Supabase (snake_case, v2.1 schema) → αντικείμενο εφαρμογής.
+ * Χειρίζεται και UUID id και το νέο πεδίο work_date (αντί για date).
+ */
+function fromSupabase(row) {
+  return {
+    id:          String(row.id),           // UUID → string
+    createdAt:   row.created_at,
+    name:        row.name,
+    phone:       row.phone    || '',
+    address:     row.address  || '',
+    sqm:         row.sqm      != null ? String(row.sqm)   : '',
+    price:       row.price    != null ? String(parseFloat(row.price).toFixed(2)) : '',
+    vegetation:  row.vegetation || '',
+    // Χρήση work_date (νέο schema) με fallback στο παλιό date
+    date:        row.work_date || row.date || '',
+    notes:       row.notes    || '',
+    // NUMERIC lat/lng → string για εμφάνιση, αλλά διατηρεί ακρίβεια
+    lat:         row.lat != null ? String(row.lat) : '',
+    lng:         row.lng != null ? String(row.lng) : '',
+    frequency:   row.frequency || '0',
+    nextDate:    row.next_date || '',
+    tags:        Array.isArray(row.tags) ? row.tags : [],
+    // Υποστηρίζει τόσο Base64 όσο και Storage URLs
+    photoBefore: row.photo_before || null,
+    photoAfter:  row.photo_after  || null,
+  };
+}
+
+/**
+ * Μετατρέπει αντικείμενο εφαρμογής → εγγραφή Supabase (v2.1 schema).
+ * - work_date αντί για date (δεσμευμένη λέξη SQL)
+ * - lat/lng ως NUMERIC (parseFloat, null αν κενό)
+ * - price ως NUMERIC(10,2) — στρογγυλοποίηση σε 2 δεκαδικά
+ * - id: μόνο αν υπάρχει ήδη (για update) — αλλιώς DEFAULT gen_random_uuid()
+ * - user_id: από auth.uid() μέσω RLS, δεν χρειάζεται να το στείλουμε
+ */
+function toSupabase(c, isNew = false) {
+  const latNum = c.lat ? parseFloat(c.lat) : null;
+  const lngNum = c.lng ? parseFloat(c.lng) : null;
+  const row = {
+    name:         c.name,
+    phone:        c.phone    || null,
+    address:      c.address  || null,
+    sqm:          c.sqm      ? Number(c.sqm)                          : null,
+    price:        c.price    ? parseFloat(parseFloat(c.price).toFixed(2)) : null,
+    vegetation:   c.vegetation || null,
+    work_date:    c.date     || null,
+    notes:        c.notes    || null,
+    lat:          isNaN(latNum) ? null : latNum,
+    lng:          isNaN(lngNum) ? null : lngNum,
+    frequency:    c.frequency || '0',
+    next_date:    c.nextDate || null,
+    tags:         c.tags     || [],
+    photo_before: c.photoBefore || null,
+    photo_after:  c.photoAfter  || null,
+  };
+  // Για update περνάμε το id — για insert το αφήνουμε στο DEFAULT
+  if (!isNew && c.id) row.id = c.id;
+  return row;
+}
+
+// ════════════════════════════════════════════════════
+// DATA LAYER — αφαίρεση αποθήκευσης
+// ════════════════════════════════════════════════════
+
+/**
+ * Φόρτωση δεδομένων: Supabase → localStorage → window.storage
+ */
+async function loadData() {
+  try {
+    if (supabaseClient) {
+      setSyncStatus('syncing');
+      const { data, error } = await supabaseClient
+        .from(SUPA_TABLE)
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      clients = (data || []).map(fromSupabase);
+      setSyncStatus('online');
+      return;
+    }
+    // Fallback: localStorage / window.storage
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) clients = JSON.parse(raw);
+    setSyncStatus('local');
+  } catch(e) {
+    console.error('loadData error:', e);
+    setSyncStatus('error');
+    // Fallback τοπικά
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) clients = JSON.parse(raw);
+    } catch(e2) {}
+  }
+}
+
+/**
+ * Αποθήκευση ΟΛΩΝ των clients.
+ * Χρησιμοποιείται μόνο για localStorage (batch save).
+ */
+async function saveLocal() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(clients)); } catch(e) {}
+}
+
+/**
+ * Upsert ενός πελάτη (νέος ή ενημέρωση).
+ * INSERT για νέο (χωρίς id), UPDATE για υπάρχον (με id).
+ */
+async function upsertClient(clientObj, isNew = false) {
+  if (supabaseClient) {
+    setSyncStatus('syncing');
+    let error;
+    if (isNew) {
+      // INSERT — χωρίς id, το Supabase παράγει UUID αυτόματα
+      // Επίσης user_id γίνεται set από DEFAULT auth.uid() μέσω RLS
+      const result = await supabaseClient
+        .from(SUPA_TABLE)
+        .insert(toSupabase(clientObj, true))
+        .select('id')
+        .single();
+      error = result.error;
+      // Ενημέρωσε το local id με το UUID που έδωσε το Supabase
+      if (!error && result.data?.id) {
+        const idx = clients.findIndex(c => c.id === clientObj.id);
+        if (idx !== -1) clients[idx].id = result.data.id;
+      }
+    } else {
+      const result = await supabaseClient
+        .from(SUPA_TABLE)
+        .update(toSupabase(clientObj, false))
+        .eq('id', clientObj.id);
+      error = result.error;
+    }
+    if (error) { setSyncStatus('error'); throw error; }
+    setSyncStatus('online');
+  }
+  // Πάντα αποθηκεύει και τοπικά ως backup
+  await saveLocal();
+}
+
+/**
+ * Διαγραφή πελάτη κατά ID.
+ */
+async function deleteClientById(id) {
+  if (supabaseClient) {
+    setSyncStatus('syncing');
+    const { error } = await supabaseClient
+      .from(SUPA_TABLE)
+      .delete()
+      .eq('id', id);
+    if (error) { setSyncStatus('error'); throw error; }
+    setSyncStatus('online');
+  }
+  clients = clients.filter(c => c.id !== id);
+  await saveLocal();
+}
+
+// ════════════════════════════════════════════════════
+// SYNC STATUS BADGE
+// ════════════════════════════════════════════════════
+function setSyncStatus(status) {
+  const badge = document.getElementById('sync-badge');
+  const label = document.getElementById('sync-label');
+  badge.className = status;
+  const map = {
+    local:   '💾 Τοπική αποθήκη',
+    online:  '☁️ Supabase',
+    syncing: '⟳ Συγχρονισμός…',
+    error:   '⚠️ Σφάλμα σύνδεσης',
+  };
+  label.textContent = (map[status] || status).replace(/^[^ ]+ /,'');
+  badge.title = map[status] || status;
+}
+
+// ════════════════════════════════════════════════════
+// ΠΛΟΗΓΗΣΗ
+// ════════════════════════════════════════════════════
+function showPage(p) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  document.getElementById('nav-'+p).classList.add('active');
+  if (p === 'map')   initMainMap();
+  if (p === 'stats') renderCharts();
+}
+
+// ════════════════════════════════════════════════════
+// ΑΥΤΟΜΑΤΗ ΚΟΣΤΟΛΟΓΗΣΗ
+// Τύπος: Τιμή = (m² × Συντελεστής_Βλάστησης) + Πάγια_Έξοδα
+// ════════════════════════════════════════════════════
+function calculateSuggestedPrice() {
+  const sqm = parseFloat(document.getElementById('f-sqm').value);
+  const veg  = document.getElementById('f-veg').value;
+  const box  = document.getElementById('price-suggestion');
+  if (!sqm || sqm <= 0 || !veg || !vegCoefficients[veg]) {
+    box.style.display = 'none'; return;
+  }
+  const coeff = vegCoefficients[veg];
+  const price = Math.ceil(sqm * coeff + FIXED_COSTS);
+  document.getElementById('suggested-price-val').textContent = price;
+  document.getElementById('price-formula').textContent =
+    `(${sqm} × ${coeff}) + ${FIXED_COSTS}€`;
+  box.style.display = 'flex';
+}
+
+function applySuggestedPrice() {
+  const v = document.getElementById('suggested-price-val').textContent;
+  document.getElementById('f-price').value = v;
+  showToast('✅ Εφαρμόστηκε η προτεινόμενη τιμή!');
+}
+
+// ════════════════════════════════════════════════════
+// ΦΩΤΟΓΡΑΦΙΕΣ — Dual mode: Supabase Storage ή Base64
+// ════════════════════════════════════════════════════
+function triggerPhotoInput(id) { document.getElementById(id).click(); }
+
+/**
+ * Κεντρικός handler ανεβάσματος φωτογραφίας.
+ * Λειτουργία Α (useStorage=true):  ανεβάζει στο Supabase Storage, αποθηκεύει URL.
+ * Λειτουργία Β (useStorage=false): συμπιέζει σε Base64 και κρατάει τοπικά.
+ */
+async function handlePhotoUpload(input, type) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const useStorage = supabaseClient && localStorage.getItem(SUPA_STORAGE_KEY) === 'true';
+  const maxBytes   = useStorage ? 3 * 1024 * 1024 : 2 * 1024 * 1024;
+  const limitLabel = useStorage ? '3MB' : '2MB';
+
+  if (file.size > maxBytes) {
+    showToast(`❌ Η φωτογραφία υπερβαίνει τα ${limitLabel}!`, true); return;
+  }
+
+  // ── Λειτουργία Α: Supabase Storage ──────────────────────────────
+  if (useStorage) {
+    const label = document.getElementById(`${type}-placeholder`);
+    label.innerHTML = `<span class="spinner"></span><div style="margin-top:6px;font-size:.75rem">Ανέβασμα…</div>`;
+
+    try {
+      // Μοναδικό path: clientId/type/timestamp.ext
+      const ext  = file.name.split('.').pop().toLowerCase() || 'jpg';
+      const path = `${editingId || 'new'}/${type}/${Date.now()}.${ext}`;
+
+      const { data, error } = await supabaseClient.storage
+        .from(SUPA_BUCKET)
+        .upload(path, file, { upsert: true, contentType: file.type });
+
+      if (error) throw error;
+
+      // Δημόσιο URL (signed URL για private bucket)
+      const { data: urlData } = supabaseClient.storage
+        .from(SUPA_BUCKET)
+        .getPublicUrl(data.path);
+
+      const photoUrl = urlData.publicUrl;
+
+      if (type === 'before') { tempPhotoBefore = photoUrl; showPhotoPreview('before', photoUrl); }
+      else                   { tempPhotoAfter  = photoUrl; showPhotoPreview('after',  photoUrl); }
+
+      showToast('☁️ Φωτογραφία ανέβηκε στο Storage!');
+    } catch(e) {
+      showToast('❌ Σφάλμα Storage: ' + (e.message||'Δοκιμάστε ξανά'), true);
+      resetPhotoPlaceholder(type);
+    }
+    return;
+  }
+
+  // ── Λειτουργία Β: Base64 με Canvas συμπίεση ─────────────────────
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let [w, h]   = [img.width, img.height];
+      if (w > PHOTO_MAX_SIZE || h > PHOTO_MAX_SIZE) {
+        if (w > h) { h = Math.round(h * PHOTO_MAX_SIZE / w); w = PHOTO_MAX_SIZE; }
+        else       { w = Math.round(w * PHOTO_MAX_SIZE / h); h = PHOTO_MAX_SIZE; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const b64 = canvas.toDataURL('image/jpeg', PHOTO_QUALITY);
+      if (type === 'before') { tempPhotoBefore = b64; showPhotoPreview('before', b64); }
+      else                   { tempPhotoAfter  = b64; showPhotoPreview('after',  b64); }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/** Επαναφορά placeholder (μετά από σφάλμα) */
+function resetPhotoPlaceholder(type) {
+  const icons = { before:'📷', after:'✅' };
+  const labels = { before:'Φωτογραφία Πριν', after:'Φωτογραφία Μετά' };
+  document.getElementById(`${type}-placeholder`).innerHTML =
+    `<span class="photo-upload-icon">${icons[type]}</span><div>${labels[type]}</div><div style="font-size:.7rem;margin-top:3px">JPG/PNG ≤2MB</div>`;
+}
+
+function showPhotoPreview(type, b64) {
+  document.getElementById(`${type}-placeholder`).style.display = 'none';
+  document.getElementById(`${type}-img`).src = b64;
+  document.getElementById(`${type}-preview`).style.display = 'block';
+}
+
+function removePhoto(event, type) {
+  event.stopPropagation();
+  if (type === 'before') { tempPhotoBefore = null; document.getElementById('f-photo-before').value = ''; }
+  else                   { tempPhotoAfter  = null; document.getElementById('f-photo-after').value  = ''; }
+  document.getElementById(`${type}-placeholder`).style.display = 'flex';
+  document.getElementById(`${type}-preview`).style.display = 'none';
+  document.getElementById(`${type}-img`).src = '';
+}
+
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('photo-lightbox').classList.add('open');
+}
+function closeLightbox() { document.getElementById('photo-lightbox').classList.remove('open'); }
+
+// ════════════════════════════════════════════════════
+// SMART REMINDERS — Εκκρεμείς επαναλήψεις
+// ════════════════════════════════════════════════════
+function isPendingReminder(c) {
+  const freq = parseInt(c.frequency) || 0;
+  if (freq === 0 || !c.date) return false;
+  const target = c.nextDate
+    ? new Date(c.nextDate)
+    : (() => { const d = new Date(c.date); d.setMonth(d.getMonth() + freq); return d; })();
+  return target <= new Date();
+}
+
+// ════════════════════════════════════════════════════
+// STATS BAR
+// ════════════════════════════════════════════════════
+function renderStatsBar() {
+  const total    = clients.length;
+  const totalSqm = clients.reduce((s,c) => s + (+c.sqm||0), 0);
+  const totalRev = clients.reduce((s,c) => s + (+c.price||0), 0);
+  const n = new Date();
+  const thisMonth = clients.filter(c => {
+    if (!c.date) return false;
+    const d = new Date(c.date);
+    return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
+  }).length;
+  const pending  = clients.filter(isPendingReminder).length;
+
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Πελάτες</div>
+      <div class="stat-value">${total}</div>
+      <div class="stat-sub">καταχωρημένοι</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Εμβαδό</div>
+      <div class="stat-value">${totalSqm.toLocaleString('el')}</div>
+      <div class="stat-sub">τ.μ. συνολικά</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Έσοδα</div>
+      <div class="stat-value">${totalRev.toLocaleString('el')} €</div>
+      <div class="stat-sub">σύνολο τιμολογίων</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Αυτόν τον μήνα</div>
+      <div class="stat-value">${thisMonth}</div>
+      <div class="stat-sub">εργασίες</div>
+    </div>
+    <div class="stat-card ${pending > 0 ? 'warn-card' : ''}">
+      <div class="stat-label">⏰ Εκκρεμείς</div>
+      <div class="stat-value">${pending}</div>
+      <div class="stat-sub">${pending > 0 ? 'χρειάζονται καθαρισμό' : 'όλα εντάξει'}</div>
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════
+// ΦΙΛΤΡΑ & ΤΑΞΙΝΟΜΗΣΗ
+// ════════════════════════════════════════════════════
+function getFiltered() {
+  const q       = document.getElementById('search-input').value.toLowerCase();
+  const veg     = document.getElementById('filter-veg').value;
+  const sort    = document.getElementById('filter-sort').value;
+  const pending = document.getElementById('filter-pending').value;
+
+  let arr = clients.filter(c => {
+    const matchQ = !q ||
+      c.name.toLowerCase().includes(q) ||
+      (c.address||'').toLowerCase().includes(q) ||
+      (c.phone||'').includes(q);
+    const matchV = !veg     || c.vegetation === veg;
+    const matchP = !pending ||
+      (pending === 'pending'   && isPendingReminder(c)) ||
+      (pending === 'recurring' && parseInt(c.frequency) > 0);
+    return matchQ && matchV && matchP;
+  });
+
+  if      (sort === 'date-desc') arr.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
+  else if (sort === 'date-asc')  arr.sort((a,b) => new Date(a.date||0) - new Date(b.date||0));
+  else if (sort === 'sqm-desc')  arr.sort((a,b) => (+b.sqm||0) - (+a.sqm||0));
+  else if (sort === 'name-asc')  arr.sort((a,b) => a.name.localeCompare(b.name,'el'));
+  return arr;
+}
+
+// ════════════════════════════════════════════════════
+// RENDER ΠΕΛΑΤΕΣ
+// ════════════════════════════════════════════════════
+function renderClients() {
+  renderStatsBar();
+  const arr  = getFiltered();
+  const grid = document.getElementById('clients-grid');
+
+  if (!arr.length) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1">
+        <div class="empty-icon">🌿</div>
+        <h3>Δεν βρέθηκαν πελάτες</h3>
+        <p>Αλλάξτε τα φίλτρα ή προσθέστε τον πρώτο σας πελάτη!</p>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = arr.map(c => {
+    const vl    = vegLabels[c.vegetation] || '';
+    const bc    = vegBadge[c.vegetation]  || '';
+    const tags  = (c.tags||[]).map(t => `<span class="tag">${tagLabels[t]||t}</span>`).join('');
+    const date  = c.date ? new Date(c.date).toLocaleDateString('el-GR') : '—';
+    const pend  = isPendingReminder(c);
+    const photo = (c.photoBefore || c.photoAfter) ? '<span title="Έχει φωτογραφίες" style="font-size:.78rem;opacity:.8">📸</span>' : '';
+    const freq  = c.frequency && parseInt(c.frequency) > 0
+      ? `<span class="tag" style="color:var(--warn);border-color:var(--warn-border);background:var(--warn-bg)">🔄 ${freqMap[c.frequency]||c.frequency+'μ.'}</span>` : '';
+
+    return `
+    <div class="client-card ${pend ? 'pending-reminder' : ''}" onclick="openDetail('${c.id}')">
+      <div class="client-card-header">
+        <div><div class="client-name">${esc(c.name)} ${photo}</div><div class="client-phone">${esc(c.phone||'—')}</div></div>
+        ${vl ? `<span class="client-badge ${bc}">${vl}</span>` : ''}
+      </div>
+      <div class="client-info">
+        <div class="info-item"><div class="info-label">Εμβαδό</div><div class="info-val">${c.sqm ? c.sqm+' m²' : '—'}</div></div>
+        <div class="info-item"><div class="info-label">Τιμή</div><div class="info-val">${c.price ? c.price+' €' : '—'}</div></div>
+        <div class="info-item" style="grid-column:1/-1"><div class="info-label">Διεύθυνση</div><div class="info-val">${esc(c.address||'—')}</div></div>
+      </div>
+      ${(tags||freq) ? `<div class="client-tags">${tags}${freq}</div>` : ''}
+      <div class="client-card-footer">
+        <div class="client-date">📅 ${date}</div>
+        <div class="card-actions" onclick="event.stopPropagation()">
+          <button class="btn btn-ghost btn-sm btn-icon" title="Επεξεργασία" onclick="openModal('${c.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm btn-icon" title="Διαγραφή" onclick="deleteClient('${c.id}')">🗑️</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// HTML escape για ασφαλή εμφάνιση
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ════════════════════════════════════════════════════
+// MODAL — ΠΡΟΣΘΗΚΗ / ΕΠΕΞΕΡΓΑΣΙΑ
+// ════════════════════════════════════════════════════
+function openModal(id=null) {
+  editingId = id;
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('modal-title').textContent = id ? '✏️ Επεξεργασία Πελάτη' : '➕ Νέος Πελάτης';
+
+  // Reset
+  ['f-name','f-phone','f-address','f-sqm','f-price','f-notes','f-lat','f-lng','f-next-date']
+    .forEach(i => { document.getElementById(i).value = ''; });
+  document.getElementById('f-veg').value = '';
+  document.getElementById('f-frequency').value = '0';
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  document.querySelectorAll('.checkbox-group input[type=checkbox]').forEach(el => el.checked = false);
+  document.getElementById('price-suggestion').style.display = 'none';
+
+  // Reset φωτογραφιών
+  tempPhotoBefore = null; tempPhotoAfter = null;
+  ['before','after'].forEach(t => {
+    document.getElementById(`${t}-placeholder`).style.display = 'flex';
+    document.getElementById(`${t}-preview`).style.display = 'none';
+    document.getElementById(`${t}-img`).src = '';
+    document.getElementById(`f-photo-${t}`).value = '';
+  });
+
+  if (id) {
+    const c = clients.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('f-name').value      = c.name    || '';
+    document.getElementById('f-phone').value     = c.phone   || '';
+    document.getElementById('f-address').value   = c.address || '';
+    document.getElementById('f-sqm').value       = c.sqm     || '';
+    document.getElementById('f-price').value     = c.price   || '';
+    document.getElementById('f-veg').value       = c.vegetation || '';
+    document.getElementById('f-date').value      = c.date    || '';
+    document.getElementById('f-notes').value     = c.notes   || '';
+    document.getElementById('f-lat').value       = c.lat     || '';
+    document.getElementById('f-lng').value       = c.lng     || '';
+    document.getElementById('f-frequency').value = c.frequency || '0';
+    document.getElementById('f-next-date').value = c.nextDate || '';
+    (c.tags||[]).forEach(t => {
+      const el = document.querySelector(`.checkbox-group input[value="${t}"]`);
+      if (el) el.checked = true;
+    });
+    if (c.photoBefore) { tempPhotoBefore = c.photoBefore; showPhotoPreview('before', c.photoBefore); }
+    if (c.photoAfter)  { tempPhotoAfter  = c.photoAfter;  showPhotoPreview('after',  c.photoAfter); }
+    calculateSuggestedPrice();
+  }
+
+  setTimeout(() => initPickMap(), 100);
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  editingId = null;
+  if (pickMap) { pickMap.remove(); pickMap = null; pickMarker = null; }
+}
+
+async function saveClient() {
+  const name  = document.getElementById('f-name').value.trim();
+  const phone = document.getElementById('f-phone').value.trim();
+  if (!name) { showToast('❌ Το όνομα είναι υποχρεωτικό!', true); return; }
+
+  const tags = [...document.querySelectorAll('.checkbox-group input[type=checkbox]:checked')]
+    .map(el => el.value);
+
+  const saveBtn = document.getElementById('save-btn');
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '<span class="spinner"></span> Αποθήκευση…';
+
+  const data = {
+    name, phone,
+    address:    document.getElementById('f-address').value.trim(),
+    sqm:        document.getElementById('f-sqm').value,
+    price:      document.getElementById('f-price').value,
+    vegetation: document.getElementById('f-veg').value,
+    date:       document.getElementById('f-date').value,
+    notes:      document.getElementById('f-notes').value.trim(),
+    lat:        document.getElementById('f-lat').value,
+    lng:        document.getElementById('f-lng').value,
+    frequency:  document.getElementById('f-frequency').value,
+    nextDate:   document.getElementById('f-next-date').value,
+    tags,
+    photoBefore: tempPhotoBefore,
+    photoAfter:  tempPhotoAfter,
+  };
+
+  try {
+    if (editingId) {
+      const idx = clients.findIndex(c => c.id === editingId);
+      clients[idx] = { ...clients[idx], ...data };
+      await upsertClient(clients[idx], false);
+      showToast('✅ Ο πελάτης ενημερώθηκε!');
+    } else {
+      const newClient = { id: uid(), createdAt: Date.now(), ...data };
+      clients.unshift(newClient);
+      await upsertClient(newClient, true);
+      showToast('✅ Ο πελάτης αποθηκεύτηκε!');
+    }
+    closeModal();
+    renderClients();
+    if (mainMapInited) refreshMainMap();
+  } catch(e) {
+    showToast('❌ Σφάλμα αποθήκευσης: ' + (e.message||'Δοκιμάστε ξανά'), true);
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '💾 Αποθήκευση';
+  }
+}
+
+async function deleteClient(id) {
+  if (!confirm('Διαγραφή αυτού του πελάτη;')) return;
+  try {
+    await deleteClientById(id);
+    renderClients();
+    if (mainMapInited) refreshMainMap();
+    showToast('🗑️ Ο πελάτης διαγράφηκε.');
+  } catch(e) {
+    showToast('❌ Σφάλμα διαγραφής.', true);
+  }
+}
+
+// ════════════════════════════════════════════════════
+// ΧΑΡΤΗΣ ΕΠΙΛΟΓΗΣ (pick-map)
+// ════════════════════════════════════════════════════
+const PIN_HTML = `<div style="width:26px;height:26px;background:#4a9c2f;border:3px solid #7ec95e;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 8px rgba(0,0,0,.5)"></div>`;
+
+function initPickMap() {
+  if (pickMap) { pickMap.remove(); pickMap = null; pickMarker = null; }
+  const lat = +document.getElementById('f-lat').value || 37.98;
+  const lng = +document.getElementById('f-lng').value || 23.73;
+  pickMap = L.map('pick-map').setView([lat, lng], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { attribution:'© OpenStreetMap' }).addTo(pickMap);
+  const icon = L.divIcon({ className:'', html:PIN_HTML, iconAnchor:[13,26] });
+
+  const setMarker = (ll) => {
+    document.getElementById('f-lat').value = ll.lat.toFixed(6);
+    document.getElementById('f-lng').value = ll.lng.toFixed(6);
+    if (pickMarker) pickMap.removeLayer(pickMarker);
+    pickMarker = L.marker(ll, { icon, draggable:true }).addTo(pickMap);
+    pickMarker.on('dragend', e => {
+      const p = e.target.getLatLng();
+      document.getElementById('f-lat').value = p.lat.toFixed(6);
+      document.getElementById('f-lng').value = p.lng.toFixed(6);
+    });
+  };
+
+  if (+document.getElementById('f-lat').value) setMarker({lat, lng});
+  pickMap.on('click', e => setMarker(e.latlng));
+}
+
+let geocodeTimer = null;
+function geocodeAddress() {
+  clearTimeout(geocodeTimer);
+  geocodeTimer = setTimeout(async () => {
+    const addr = document.getElementById('f-address').value.trim();
+    if (addr.length < 5) return;
+    try {
+      const r    = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr+', Ελλάδα')}&format=json&limit=1`);
+      const data = await r.json();
+      if (!data.length) return;
+      const { lat, lon } = data[0];
+      document.getElementById('f-lat').value = parseFloat(lat).toFixed(6);
+      document.getElementById('f-lng').value = parseFloat(lon).toFixed(6);
+      if (pickMap) {
+        pickMap.setView([lat, lon], 16);
+        const icon = L.divIcon({ className:'', html:PIN_HTML, iconAnchor:[13,26] });
+        if (pickMarker) pickMap.removeLayer(pickMarker);
+        pickMarker = L.marker([lat,lon], { icon, draggable:true }).addTo(pickMap);
+        pickMarker.on('dragend', e => {
+          const p = e.target.getLatLng();
+          document.getElementById('f-lat').value = p.lat.toFixed(6);
+          document.getElementById('f-lng').value = p.lng.toFixed(6);
+        });
+      }
+    } catch(e) {}
+  }, 700);
+}
+
+// ════════════════════════════════════════════════════
+// ΚΕΝΤΡΙΚΟΣ ΧΑΡΤΗΣ
+// ════════════════════════════════════════════════════
+function initMainMap() {
+  if (!mainMapInited) {
+    mainMap = L.map('main-map').setView([38.2, 23.5], 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      { attribution:'© OpenStreetMap' }).addTo(mainMap);
+    mainMapInited = true;
+  }
+  refreshMainMap();
+}
+
+function refreshMainMap() {
+  mainMap.eachLayer(l => { if (l instanceof L.Marker) mainMap.removeLayer(l); });
+  const withCoords = clients.filter(c => c.lat && c.lng);
+  withCoords.forEach(c => {
+    const color = { dense:'#e8a74a', medium:'#7ec95e', low:'#7eb3e8', 'gaïdouragka':'#e87ec9' }[c.vegetation] || '#7ec95e';
+    const icon  = L.divIcon({
+      className:'',
+      html:`<div style="width:22px;height:22px;background:${color};border:2.5px solid #fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 8px rgba(0,0,0,.6)"></div>`,
+      iconAnchor:[11,22]
+    });
+    L.marker([+c.lat,+c.lng], { icon }).addTo(mainMap).bindPopup(`
+      <div class="popup-name">${esc(c.name)}</div>
+      <div class="popup-info">📱 ${esc(c.phone||'—')}</div>
+      <div class="popup-info">📍 ${esc(c.address||'—')}</div>
+      <div class="popup-sqm">${c.sqm||'—'} m²</div>
+      ${c.price ? `<div class="popup-info" style="color:var(--accent);font-weight:600">${c.price} €</div>` : ''}
+      ${c.notes ? `<div class="popup-info" style="font-style:italic;margin-top:4px">${esc(c.notes.slice(0,80))}${c.notes.length>80?'…':''}</div>` : ''}
+      <div style="margin-top:8px">
+        <a href="https://maps.google.com/?q=${c.lat},${c.lng}" target="_blank"
+           style="color:var(--supa);font-size:.76rem;text-decoration:none;font-weight:600">🧭 Οδηγίες μέσω Google Maps →</a>
+      </div>`);
+  });
+  if (withCoords.length > 1) {
+    mainMap.fitBounds(L.latLngBounds(withCoords.map(c => [+c.lat,+c.lng])), { padding:[40,40] });
+  }
+}
+
+// ════════════════════════════════════════════════════
+// DETAIL PANEL
+// ════════════════════════════════════════════════════
+function openDetail(id) {
+  const c = clients.find(x => x.id === id);
+  if (!c) return;
+
+  document.getElementById('d-name').textContent  = c.name;
+  document.getElementById('d-phone').textContent = c.phone || '';
+
+  const tags    = (c.tags||[]).map(t => `<span class="tag">${tagLabels[t]||t}</span>`).join(' ');
+  const vl      = vegLabels[c.vegetation] || '—';
+  const bc      = vegBadge[c.vegetation]  || '';
+  const freq    = freqMap[c.frequency||'0'] || '—';
+  const nextLbl = c.nextDate
+    ? new Date(c.nextDate).toLocaleDateString('el-GR',{day:'numeric',month:'long',year:'numeric'})
+    : (c.date && parseInt(c.frequency) > 0
+        ? (() => { const d=new Date(c.date); d.setMonth(d.getMonth()+parseInt(c.frequency)); return d.toLocaleDateString('el-GR',{day:'numeric',month:'long',year:'numeric'}); })()
+        : '—');
+
+  const photosHtml = (c.photoBefore || c.photoAfter) ? `
+    <div class="detail-row">
+      <div class="detail-label">📸 Φωτογραφίες εργασίας</div>
+      <div class="photo-comparison">
+        ${c.photoBefore ? `<div class="photo-comp-item"><div class="photo-comp-label">Πριν</div><img src="${c.photoBefore}" alt="Πριν" onclick="openLightbox(this.src)"></div>` : ''}
+        ${c.photoAfter  ? `<div class="photo-comp-item"><div class="photo-comp-label">Μετά</div><img src="${c.photoAfter}"  alt="Μετά"  onclick="openLightbox(this.src)"></div>` : ''}
+      </div>
+    </div>` : '';
+
+  const pendingAlert = isPendingReminder(c) ? `
+    <div style="background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:8px;padding:10px 13px;margin-bottom:14px;font-size:.8rem;color:var(--warn)">
+      ⏰ <strong>Εκκρεμής επανάκαμψη!</strong> Χρειάζεται νέο καθαρισμό.
+    </div>` : '';
+
+  const dirBtn = (c.lat && c.lng)
+    ? `<a href="https://maps.google.com/?q=${c.lat},${c.lng}" target="_blank"
+         class="btn btn-supa btn-sm" style="text-decoration:none;margin-left:8px">🧭 Οδηγίες</a>` : '';
+
+  document.getElementById('detail-body').innerHTML = `
+    ${pendingAlert}
+    <div style="text-align:center;margin-bottom:20px;padding:18px;background:var(--bg3);border-radius:12px">
+      <div class="detail-sqm">${c.sqm||'—'} <span style="font-size:.9rem;color:var(--text3)">m²</span></div>
+      <div style="font-size:.76rem;color:var(--text3)">Εμβαδό οικοπέδου</div>
+    </div>
+    ${photosHtml}
+    <div class="detail-row"><div class="detail-label">Τηλέφωνο</div><div class="detail-val"><a href="tel:${esc(c.phone)}" style="color:var(--accent);text-decoration:none">${esc(c.phone||'—')}</a></div></div>
+    <div class="detail-row"><div class="detail-label">Διεύθυνση</div><div class="detail-val">${esc(c.address||'—')} ${dirBtn}</div></div>
+    <div class="detail-row"><div class="detail-label">Ημερομηνία εργασίας</div><div class="detail-val">${c.date ? new Date(c.date).toLocaleDateString('el-GR',{day:'numeric',month:'long',year:'numeric'}) : '—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Βλάστηση</div><div class="detail-val">${vl !== '—' ? `<span class="client-badge ${bc}" style="font-size:.75rem">${vl}</span>` : '—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Τιμή</div><div class="detail-val" style="font-size:1.05rem;font-weight:700;color:var(--accent)">${c.price ? c.price+' €' : '—'}</div></div>
+    <div class="detail-row"><div class="detail-label">Συχνότητα</div><div class="detail-val">${freq}</div></div>
+    ${parseInt(c.frequency) > 0 ? `<div class="detail-row"><div class="detail-label">Επόμενος καθαρισμός</div><div class="detail-val" style="color:var(--warn)">${nextLbl}</div></div>` : ''}
+    ${tags ? `<div class="detail-row"><div class="detail-label">Χαρακτηριστικά</div><div class="detail-val" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${tags}</div></div>` : ''}
+    ${c.notes ? `<div class="detail-row"><div class="detail-label">Σχόλια</div><div class="detail-val" style="color:var(--text2);font-style:italic;line-height:1.5">${esc(c.notes)}</div></div>` : ''}
+    ${c.lat&&c.lng ? `<div class="detail-row"><div class="detail-label">Συντεταγμένες</div><div class="detail-val" style="font-size:.73rem;color:var(--text3)">${c.lat}, ${c.lng}</div></div>` : ''}
+    <div style="margin-top:20px;display:flex;gap:8px">
+      <button class="btn btn-primary" style="flex:1" onclick="openModal('${c.id}');closeDetail()">✏️ Επεξεργασία</button>
+      <button class="btn btn-danger" onclick="deleteClient('${c.id}');closeDetail()">🗑️</button>
+    </div>`;
+
+  document.getElementById('detail-overlay').classList.add('open');
+}
+
+function closeDetail(e) {
+  if (e && e.target !== document.getElementById('detail-overlay')) return;
+  document.getElementById('detail-overlay').classList.remove('open');
+}
+
+// ════════════════════════════════════════════════════
+// CHARTS — με Empty States
+// ════════════════════════════════════════════════════
+const CD = {
+  text:'#98b898', grid:'#2a3d2a',
+  font:{ family:"'DM Sans',sans-serif", size:11 }
+};
+
+function showChartEmpty(wrapId, icon, msg) {
+  const w = document.getElementById(wrapId);
+  const c = w.querySelector('canvas');
+  if (c) c.style.display='none';
+  const old = w.querySelector('.chart-empty');
+  if (old) old.remove();
+  const d = document.createElement('div');
+  d.className='chart-empty';
+  d.innerHTML=`<div class="chart-empty-icon">${icon}</div><div class="chart-empty-text">${msg}</div>`;
+  w.appendChild(d);
+}
+function showChartCanvas(wrapId) {
+  const w = document.getElementById(wrapId);
+  const c = w.querySelector('canvas');
+  if (c) c.style.display='block';
+  const e = w.querySelector('.chart-empty');
+  if (e) e.remove();
+}
+
+function renderCharts() {
+  // ── Βλάστηση ──
+  const vegCount = {};
+  clients.forEach(c => { const k=vegLabels[c.vegetation]||'Άλλο'; vegCount[k]=(vegCount[k]||0)+1; });
+  if (!Object.keys(vegCount).length) {
+    showChartEmpty('wrap-veg','🌱','Δεν υπάρχουν δεδομένα βλάστησης.');
+  } else {
+    showChartCanvas('wrap-veg');
+    if (vegChart) vegChart.destroy();
+    vegChart = new Chart(document.getElementById('chart-veg').getContext('2d'),{
+      type:'doughnut',
+      data:{ labels:Object.keys(vegCount), datasets:[{ data:Object.values(vegCount),
+        backgroundColor:['#e8a74a','#7ec95e','#7eb3e8','#e87ec9','#aaa'],
+        borderColor:'#1f2f1f', borderWidth:3, hoverOffset:6 }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ labels:{ color:CD.text, font:CD.font, padding:12 } } } }
+    });
+  }
+
+  // ── Εργασίες ανά μήνα ──
+  const months = {};
+  clients.forEach(c => {
+    if (!c.date) return;
+    const d=new Date(c.date), k=d.toLocaleDateString('el-GR',{month:'short',year:'2-digit'});
+    months[k]=(months[k]||0)+1;
+  });
+  const sm = Object.entries(months)
+    .sort((a,b)=>new Date('01 '+a[0])-new Date('01 '+b[0])).slice(-8);
+  if (!sm.length) {
+    showChartEmpty('wrap-monthly','📅','Δεν υπάρχουν ημερομηνίες εργασιών.');
+  } else {
+    showChartCanvas('wrap-monthly');
+    if (monthlyChart) monthlyChart.destroy();
+    monthlyChart = new Chart(document.getElementById('chart-monthly').getContext('2d'),{
+      type:'bar',
+      data:{ labels:sm.map(x=>x[0]), datasets:[{ label:'Εργασίες', data:sm.map(x=>x[1]),
+        backgroundColor:'rgba(74,156,47,.7)', borderColor:'#7ec95e', borderWidth:1, borderRadius:5 }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{ x:{ticks:{color:CD.text,font:CD.font},grid:{color:CD.grid}},
+                 y:{ticks:{color:CD.text,font:CD.font,stepSize:1},grid:{color:CD.grid}} } }
+    });
+  }
+
+  // ── Εμβαδό (top 8) ──
+  const sorted = [...clients].filter(c=>c.sqm).sort((a,b)=>+b.sqm-+a.sqm).slice(0,8);
+  if (!sorted.length) {
+    showChartEmpty('wrap-sqm','📐','Δεν υπάρχουν δεδομένα εμβαδού.');
+  } else {
+    showChartCanvas('wrap-sqm');
+    if (sqmChart) sqmChart.destroy();
+    sqmChart = new Chart(document.getElementById('chart-sqm').getContext('2d'),{
+      type:'bar',
+      data:{ labels:sorted.map(c=>c.name.split(' ')[0]), datasets:[{ label:'m²', data:sorted.map(c=>+c.sqm),
+        backgroundColor:'rgba(126,201,94,.6)', borderColor:'#7ec95e', borderWidth:1, borderRadius:5 }] },
+      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{ x:{ticks:{color:CD.text,font:CD.font},grid:{color:CD.grid}},
+                 y:{ticks:{color:CD.text,font:CD.font},grid:{color:CD.grid}} } }
+    });
+  }
+
+  // ── Χαρακτηριστικά ──
+  const tagCount = {};
+  clients.forEach(c => (c.tags||[]).forEach(t => { tagCount[tagLabels[t]||t]=(tagCount[tagLabels[t]||t]||0)+1; }));
+  if (!Object.keys(tagCount).length) {
+    showChartEmpty('wrap-tags','🏷️','Δεν υπάρχουν ετικέτες ακόμα.');
+  } else {
+    showChartCanvas('wrap-tags');
+    if (tagsChart) tagsChart.destroy();
+    tagsChart = new Chart(document.getElementById('chart-tags').getContext('2d'),{
+      type:'polarArea',
+      data:{ labels:Object.keys(tagCount), datasets:[{ data:Object.values(tagCount),
+        backgroundColor:['rgba(74,156,47,.6)','rgba(126,201,94,.6)','rgba(232,167,74,.6)',
+          'rgba(126,179,232,.6)','rgba(232,126,201,.6)','rgba(170,170,100,.6)',
+          'rgba(100,170,170,.6)','rgba(200,100,100,.6)'] }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ labels:{ color:CD.text, font:{family:"'DM Sans'",size:10}, padding:8 } } },
+        scales:{ r:{ ticks:{ display:false }, grid:{ color:CD.grid } } } }
+    });
+  }
+}
+
+// ════════════════════════════════════════════════════
+// SETTINGS MODAL
+// ════════════════════════════════════════════════════
+function openSettings() {
+  document.getElementById('settings-overlay').classList.add('open');
+  updateSettingsUI();
+  // Prefill διαπιστευτηρίων
+  document.getElementById('s-url').value = localStorage.getItem(SUPA_URL_KEY) || '';
+  document.getElementById('s-key').value = localStorage.getItem(SUPA_KEY_KEY) || '';
+  // Ενημέρωση tab δεδομένων — αριθμός τοπικών
+  const localClients = (() => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]').length; } catch(e){ return 0; }
+  })();
+  document.getElementById('local-count-label').textContent = `${localClients} πελάτες`;
+  // Storage toggle — κατάσταση από localStorage
+  const storageToggle = document.getElementById('storage-toggle');
+  if (storageToggle) {
+    storageToggle.checked = localStorage.getItem(SUPA_STORAGE_KEY) === 'true';
+    updateStorageToggleUI();
+  }
+}
+
+function closeSettings() {
+  document.getElementById('settings-overlay').classList.remove('open');
+}
+
+/** Toggle switch visual update (CSS sibling selector workaround) */
+function updateStorageToggleUI() {
+  const on   = localStorage.getItem(SUPA_STORAGE_KEY) === 'true';
+  const desc = document.getElementById('storage-toggle-desc');
+  const track = document.getElementById('storage-toggle-track');
+  const thumb = document.getElementById('storage-toggle-thumb');
+  if (track) track.style.background = (on && supabaseClient) ? 'var(--supa)' : 'var(--border2)';
+  if (thumb) thumb.style.transform  = (on && supabaseClient) ? 'translateX(18px)' : 'translateX(0)';
+  if (!desc) return;
+  if (on && supabaseClient) {
+    desc.innerHTML = `<span style="color:var(--supa)">☁️ Ενεργό</span> — Φωτογραφίες → bucket <code style="background:var(--bg3);padding:1px 5px;border-radius:4px;font-size:.75rem">${SUPA_BUCKET}</code>. Η βάση κρατάει μόνο το URL.`;
+  } else if (on && !supabaseClient) {
+    desc.innerHTML = `<span style="color:var(--warn)">⚠️ Απαιτεί σύνδεση Supabase</span> — Συνδεθείτε πρώτα από την καρτέλα ☁️ Supabase.`;
+  } else {
+    desc.innerHTML = `<span style="color:var(--text3)">💾 Ανενεργό</span> — Φωτογραφίες αποθηκεύονται ως Base64 στη βάση.`;
+  }
+}
+
+/** Toggle αποθήκευσης φωτογραφιών: Storage ↔ Base64 */
+function toggleStorageMode(checkbox) {
+  if (checkbox.checked && !supabaseClient) {
+    showToast('❌ Συνδεθείτε πρώτα με Supabase!', true);
+    checkbox.checked = false;
+    return;
+  }
+  localStorage.setItem(SUPA_STORAGE_KEY, checkbox.checked ? 'true' : 'false');
+  updateStorageToggleUI();
+  showToast(checkbox.checked ? '☁️ Storage mode ενεργό!' : '💾 Base64 mode ενεργό!');
+}
+
+function switchSettingsTab(tab, btn) {
+  document.querySelectorAll('.settings-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.settings-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('pane-'+tab).classList.add('active');
+}
+
+function updateSettingsUI() {
+  const card    = document.getElementById('supa-status-card');
+  const icon    = document.getElementById('supa-status-icon');
+  const title   = document.getElementById('supa-status-title');
+  const sub     = document.getElementById('supa-status-sub');
+  const discBtn = document.getElementById('supa-disconnect-btn');
+  if (supabaseClient) {
+    card.className  = 'supa-status-card connected';
+    icon.textContent  = '☁️';
+    title.textContent = 'Συνδεδεμένο με Supabase';
+    sub.textContent   = localStorage.getItem(SUPA_URL_KEY) || '';
+    discBtn.style.display = 'block';
+  } else {
+    card.className  = 'supa-status-card';
+    icon.textContent  = '💾';
+    title.textContent = 'Τοπική αποθήκη (localStorage)';
+    sub.textContent   = 'Τα δεδομένα αποθηκεύονται μόνο στο browser';
+    discBtn.style.display = 'none';
+  }
+}
+
+function toggleKeyVisibility() {
+  const inp = document.getElementById('s-key');
+  const btn = document.getElementById('key-toggle-btn');
+  if (inp.type === 'password') { inp.type = 'text';     btn.textContent = '🙈'; }
+  else                         { inp.type = 'password'; btn.textContent = '👁️'; }
+}
+
+function showConnResult(msg, ok) {
+  const el = document.getElementById('conn-result');
+  el.textContent = msg;
+  el.className   = `conn-result show ${ok ? 'ok' : 'fail'}`;
+}
+
+/** Δοκιμή σύνδεσης χωρίς αποθήκευση */
+async function testSupabaseConnection() {
+  const url = document.getElementById('s-url').value.trim();
+  const key = document.getElementById('s-key').value.trim();
+  const btn = document.getElementById('test-conn-btn');
+
+  if (!url || !key) { showConnResult('❌ Συμπληρώστε URL και Key.', false); return; }
+  btn.innerHTML = '<span class="spinner"></span> Δοκιμή…';
+  btn.disabled  = true;
+
+  try {
+    const tmp = window.supabase.createClient(url, key);
+    const { error } = await tmp.from(SUPA_TABLE).select('id').limit(1);
+    if (error) throw new Error(error.message);
+    showConnResult('✅ Σύνδεση επιτυχής! Ο πίνακας clients βρέθηκε.', true);
+  } catch(e) {
+    const msg = e.message.includes('relation') || e.message.includes('does not exist')
+      ? '⚠️ Σύνδεση ΟΚ αλλά ο πίνακας "clients" δεν βρέθηκε. Εκτελέστε πρώτα το SQL Schema.'
+      : `❌ Σφάλμα: ${e.message}`;
+    showConnResult(msg, false);
+  } finally {
+    btn.innerHTML = '🔌 Δοκιμή Σύνδεσης';
+    btn.disabled  = false;
+  }
+}
+
+/** Αποθήκευση config + σύνδεση + φόρτωση δεδομένων */
+async function saveSupabaseConfig() {
+  const url = document.getElementById('s-url').value.trim();
+  const key = document.getElementById('s-key').value.trim();
+  const btn = document.getElementById('save-conn-btn');
+
+  if (!url || !key) { showConnResult('❌ Συμπληρώστε URL και Key.', false); return; }
+  btn.innerHTML = '<span class="spinner"></span> Σύνδεση…';
+  btn.disabled  = true;
+
+  const ok = await initSupabase(url, key);
+  if (ok) {
+    localStorage.setItem(SUPA_URL_KEY, url);
+    localStorage.setItem(SUPA_KEY_KEY, key);
+    showConnResult('✅ Συνδέθηκε! Φόρτωση δεδομένων…', true);
+    await loadData();
+    renderClients();
+    if (mainMapInited) refreshMainMap();
+    updateSettingsUI();
+    showToast('☁️ Συνδέθηκε με Supabase!');
+  } else {
+    supabaseClient = null;
+    showConnResult('❌ Αποτυχία σύνδεσης. Ελέγξτε URL, Key και ότι τρέξατε το SQL Schema.', false);
+    setSyncStatus('error');
+  }
+
+  btn.innerHTML = '☁️ Σύνδεση & Συγχρονισμός';
+  btn.disabled  = false;
+}
+
+/** Αποσύνδεση από Supabase — επιστροφή σε localStorage */
+async function disconnectSupabase() {
+  if (!confirm('Αποσύνδεση από Supabase; Τα τοπικά δεδομένα παραμένουν.')) return;
+  supabaseClient = null;
+  localStorage.removeItem(SUPA_URL_KEY);
+  localStorage.removeItem(SUPA_KEY_KEY);
+  setSyncStatus('local');
+  await loadData();
+  renderClients();
+  updateSettingsUI();
+  showToast('💾 Επιστροφή σε τοπική αποθήκη.');
+}
+
+/** Ανέβασμα τοπικών δεδομένων στο Supabase */
+async function migrateToSupabase() {
+  if (!supabaseClient) {
+    showToast('❌ Δεν υπάρχει σύνδεση Supabase!', true); return;
+  }
+  const localRaw = localStorage.getItem(STORAGE_KEY);
+  if (!localRaw) { showToast('❌ Δεν βρέθηκαν τοπικά δεδομένα.', true); return; }
+  const local = JSON.parse(localRaw);
+  if (!local.length) { showToast('❌ Δεν υπάρχουν τοπικά δεδομένα.', true); return; }
+
+  if (!confirm(`Ανέβασμα ${local.length} πελατών στο Supabase; Υπάρχοντα records με ίδιο ID θα ενημερωθούν.`)) return;
+
+  setSyncStatus('syncing');
+  const btn = document.getElementById('migrate-up-btn');
+  btn.innerHTML = '<span class="spinner"></span> Ανέβασμα…';
+  btn.disabled  = true;
+
+  try {
+    // Για migration, στέλνουμε τα IDs για να αποφύγουμε duplicates
+    const rows = local.map(c => toSupabase(c, false));
+    const { error } = await supabaseClient.from(SUPA_TABLE).upsert(rows, { onConflict:'id', ignoreDuplicates: false });
+    if (error) throw error;
+    showToast(`✅ Ανέβηκαν ${local.length} πελάτες στο Supabase!`);
+    await loadData();
+    renderClients();
+  } catch(e) {
+    showToast('❌ Σφάλμα: ' + e.message, true);
+    setSyncStatus('error');
+  } finally {
+    btn.innerHTML = '☁️ Ανέβασμα στο Supabase';
+    btn.disabled  = false;
+  }
+}
+
+/** Κατέβασμα δεδομένων Supabase → localStorage */
+async function migrateFromSupabase() {
+  if (!supabaseClient) {
+    showToast('❌ Δεν υπάρχει σύνδεση Supabase!', true); return;
+  }
+  const btn = document.getElementById('migrate-down-btn');
+  btn.innerHTML = '<span class="spinner"></span> Λήψη…';
+  btn.disabled  = true;
+
+  try {
+    const { data, error } = await supabaseClient.from(SUPA_TABLE).select('*');
+    if (error) throw error;
+    const mapped = (data||[]).map(fromSupabase);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped));
+    showToast(`✅ ${mapped.length} πελάτες αποθηκεύτηκαν τοπικά!`);
+  } catch(e) {
+    showToast('❌ Σφάλμα: ' + e.message, true);
+  } finally {
+    btn.innerHTML = '💾 Αποθήκευση τοπικά';
+    btn.disabled  = false;
+  }
+}
+
+/** Διαγραφή τοπικών δεδομένων */
+function clearLocalData() {
+  if (!confirm('⚠️ Διαγραφή ΟΛΩΝ των τοπικών δεδομένων; Αυτό δεν αναιρείται!')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  if (!supabaseClient) { clients = []; renderClients(); }
+  showToast('🗑️ Τοπικά δεδομένα διαγράφηκαν.');
+}
+
+/** Διαγραφή δεδομένων Supabase */
+async function clearSupabaseData() {
+  if (!supabaseClient) { showToast('❌ Δεν υπάρχει σύνδεση Supabase!', true); return; }
+  if (!confirm('⚠️ Διαγραφή ΟΛΩΝ των δεδομένων από το Supabase; Αυτό ΔΕΝ αναιρείται!')) return;
+  if (!confirm('Τελευταία επιβεβαίωση — σίγουρα;')) return;
+
+  setSyncStatus('syncing');
+  try {
+    const { error } = await supabaseClient.from(SUPA_TABLE).delete().neq('id','__never__');
+    if (error) throw error;
+    clients = [];
+    renderClients();
+    showToast('🗑️ Δεδομένα Supabase διαγράφηκαν.');
+    setSyncStatus('online');
+  } catch(e) {
+    showToast('❌ Σφάλμα: ' + e.message, true);
+    setSyncStatus('error');
+  }
+}
+
+/** Αντιγραφή κύριου SQL στο clipboard */
+async function copySQL() {
+  const text = document.getElementById('sql-schema-block').textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('✅ SQL Schema αντιγράφηκε!');
+  } catch(e) { showToast('❌ Αντιγραφή μη διαθέσιμη.', true); }
+}
+
+/** Αντιγραφή Storage SQL στο clipboard */
+async function copyStorageSQL() {
+  const text = document.getElementById('sql-storage-block').textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('✅ Storage SQL αντιγράφηκε!');
+  } catch(e) { showToast('❌ Αντιγραφή μη διαθέσιμη.', true); }
+}
+
+// ════════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ════════════════════════════════════════════════════
+function toggleExportMenu(e) {
+  e.stopPropagation();
+  const m = document.getElementById('export-menu');
+  m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+document.addEventListener('click', () => {
+  const m = document.getElementById('export-menu');
+  if (m) m.style.display = 'none';
+});
+
+function downloadFile(content, filename, type) {
+  const blob = new Blob([content], { type });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportJSON() {
+  if (!clients.length) { showToast('❌ Δεν υπάρχουν δεδομένα!', true); return; }
+  const out = {
+    exported_at: new Date().toISOString(),
+    version: 2,
+    source: supabaseClient ? 'supabase' : 'local',
+    total_clients: clients.length,
+    total_sqm: clients.reduce((s,c)=>s+(+c.sqm||0),0),
+    clients
+  };
+  const date = new Date().toISOString().split('T')[0];
+  downloadFile(JSON.stringify(out,null,2), `greencut_v2_${date}.json`, 'application/json');
+  showToast('✅ Εξαγωγή JSON ολοκληρώθηκε!');
+  document.getElementById('export-menu').style.display='none';
+}
+
+function exportCSV() {
+  if (!clients.length) { showToast('❌ Δεν υπάρχουν δεδομένα!', true); return; }
+  const BOM = '\uFEFF';
+  const headers = [
+    'Ονοματεπώνυμο','Τηλέφωνο','Διεύθυνση','Τ.Μ.','Τιμή (€)',
+    'Ημερομηνία','Βλάστηση','Συχνότητα','Επόμενος','Χαρακτηριστικά',
+    'Σχόλια','Γεωγρ.Πλάτος','Γεωγρ.Μήκος','Φωτο Πριν','Φωτο Μετά'
+  ];
+  const vegMap = { dense:'Πυκνή', medium:'Μέτρια', low:'Χαμηλή', 'gaïdouragka':'Γαϊδουράγκαθα' };
+  const escape = v => `"${String(v||'').replace(/"/g,'""')}"`;
+  const rows = clients.map(c => [
+    escape(c.name), escape(c.phone), escape(c.address),
+    escape(c.sqm), escape(c.price),
+    escape(c.date ? new Date(c.date).toLocaleDateString('el-GR'):''),
+    escape(vegMap[c.vegetation]||c.vegetation||''),
+    escape(freqMap[c.frequency||'0']||'Εφάπαξ'),
+    escape(c.nextDate ? new Date(c.nextDate).toLocaleDateString('el-GR'):''),
+    escape((c.tags||[]).map(t=>tagLabels[t]||t).join(', ')),
+    escape(c.notes),
+    escape(c.lat || ''), escape(c.lng || ''),
+    escape(c.photoBefore ? (c.photoBefore.startsWith('data:') ? 'Υπάρχει (Base64)' : c.photoBefore) : ''),
+    escape(c.photoAfter  ? (c.photoAfter.startsWith('data:')  ? 'Υπάρχει (Base64)' : c.photoAfter)  : '')
+  ].join(';'));
+  const csv  = BOM + [headers.map(h=>`"${h}"`).join(';'),...rows].join('\r\n');
+  const date = new Date().toISOString().split('T')[0];
+  downloadFile(csv, `greencut_v2_${date}.csv`, 'text/csv;charset=utf-8');
+  showToast('✅ Εξαγωγή CSV ολοκληρώθηκε!');
+  document.getElementById('export-menu').style.display='none';
+}
+
+function importTrigger() {
+  document.getElementById('import-file').click();
+  document.getElementById('export-menu').style.display='none';
+}
+
+async function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const btn = document.querySelector('.export-opt'); // Placeholder
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const imported = Array.isArray(data) ? data : (data.clients || []);
+    if (!imported.length) { showToast('❌ Δεν βρέθηκαν δεδομένα!', true); return; }
+    const existingIds = new Set(clients.map(c => c.id));
+    const newClients  = imported.filter(c => c.id && !existingIds.has(c.id));
+
+    if (supabaseClient && newClients.length) {
+      setSyncStatus('syncing');
+      const { error } = await supabaseClient
+        .from(SUPA_TABLE)
+        .upsert(newClients.map(c => toSupabase(c, false)), { onConflict:'id' });
+      if (error) throw error;
+      setSyncStatus('online');
+    }
+
+    clients = [...newClients, ...clients];
+    await saveLocal();
+    renderClients();
+    showToast(`✅ Εισήχθησαν ${newClients.length} πελάτες!`);
+  } catch(e) {
+    showToast('❌ Σφάλμα εισαγωγής: ' + (e.message||''), true);
+    setSyncStatus('error');
+  }
+  event.target.value = '';
+}
+
+// ════════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg, isError=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = isError ? 'var(--danger)' : 'var(--accent2)';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ════════════════════════════════════════════════════
+// UTILITIES
+// ════════════════════════════════════════════════════
+function uid() { return crypto.randomUUID(); }
+
+// ════════════════════════════════════════════════════
+// PWA
+// ════════════════════════════════════════════════════
+function setupPWAManifest() {
+  const manifest = {
+    name:'GreenCut Pro v2', short_name:'GreenCut',
+    description:'Διαχείριση Καθαρισμού Οικοπέδων',
+    start_url:'./', display:'standalone',
+    background_color:'#0c1a0c', theme_color:'#0c1a0c',
+    orientation:'portrait-primary',
+    icons:[{ src:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="80" fill="%231f2f1f"/><text y="350" font-size="320" text-anchor="middle" x="256">🌿</text></svg>', sizes:'512x512', type:'image/svg+xml', purpose:'any maskable' }],
+    lang:'el'
+  };
+  const blob = new Blob([JSON.stringify(manifest)],{type:'application/json'});
+  document.getElementById('pwa-manifest').href = URL.createObjectURL(blob);
+}
+
+async function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const r = await fetch('./sw.js',{method:'HEAD'}).catch(()=>null);
+    if (r?.ok) {
+      await navigator.serviceWorker.register('./sw.js');
+    }
+  } catch(e) {}
+}
+
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredPrompt=e;
+  document.getElementById('pwa-install-banner').classList.add('show');
+});
+document.getElementById('pwa-install-btn').addEventListener('click', async()=>{
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt=null; dismissPwaBanner();
+  showToast('✅ Εφαρμογή εγκαταστάθηκε!');
+});
+function dismissPwaBanner() {
+  document.getElementById('pwa-install-banner').classList.remove('show');
+}
+
+// ════════════════════════════════════════════════════
+// AUTH — LOGIN / SIGNUP / SIGNOUT
+// ════════════════════════════════════════════════════
+
+let currentUser = null;
+
+function switchLoginTab(tab) {
+  ['signin','signup','reset'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === tab ? 'flex' : 'none';
+    document.querySelectorAll('.login-tab')[['signin','signup','reset'].indexOf(t)]
+      .classList.toggle('active', t === tab);
+  });
+  clearLoginMessages();
+}
+
+function setLoginLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.innerHTML = loading
+    ? '<span class="spinner"></span> Παρακαλώ περιμένετε…'
+    : btn.dataset.label || btn.innerHTML;
+  if (!loading && !btn.dataset.label) btn.dataset.label = btn.innerHTML;
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg; el.classList.add('show');
+  document.getElementById('login-info').classList.remove('show');
+}
+function showLoginInfo(msg) {
+  const el = document.getElementById('login-info');
+  el.textContent = msg; el.classList.add('show');
+  document.getElementById('login-error').classList.remove('show');
+}
+function clearLoginMessages() {
+  document.getElementById('login-error').classList.remove('show');
+  document.getElementById('login-info').classList.remove('show');
+}
+
+async function doSignIn() {
+  if (!supabaseClient) { showLoginError('⚠️ Πρώτα ρύθμισε τη σύνδεση Supabase στις ⚙️ Ρυθμίσεις.'); return; }
+  const email = document.getElementById('si-email').value.trim();
+  const pass  = document.getElementById('si-pass').value;
+  if (!email || !pass) { showLoginError('Συμπλήρωσε email και κωδικό.'); return; }
+  setLoginLoading('si-btn', true);
+  clearLoginMessages();
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+  setLoginLoading('si-btn', false);
+  if (error) { showLoginError('❌ ' + (error.message || 'Σφάλμα σύνδεσης')); return; }
+  onAuthSuccess(data.user);
+}
+
+async function doSignUp() {
+  if (!supabaseClient) { showLoginError('⚠️ Πρώτα ρύθμισε τη σύνδεση Supabase στις ⚙️ Ρυθμίσεις.'); return; }
+  const email = document.getElementById('su-email').value.trim();
+  const pass  = document.getElementById('su-pass').value;
+  if (!email || !pass) { showLoginError('Συμπλήρωσε email και κωδικό.'); return; }
+  if (pass.length < 6) { showLoginError('Ο κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες.'); return; }
+  setLoginLoading('su-btn', true);
+  clearLoginMessages();
+  const { data, error } = await supabaseClient.auth.signUp({ email, password: pass });
+  setLoginLoading('su-btn', false);
+  if (error) { showLoginError('❌ ' + (error.message || 'Σφάλμα εγγραφής')); return; }
+  if (data.user && data.session) {
+    onAuthSuccess(data.user);
+  } else {
+    showLoginInfo('✅ Στάλθηκε email επιβεβαίωσης! Έλεγξε τα εισερχόμενά σου.');
+  }
+}
+
+async function doReset() {
+  if (!supabaseClient) { showLoginError('⚠️ Πρώτα ρύθμισε τη σύνδεση Supabase στις ⚙️ Ρυθμίσεις.'); return; }
+  const email = document.getElementById('rs-email').value.trim();
+  if (!email) { showLoginError('Συμπλήρωσε το email σου.'); return; }
+  setLoginLoading('rs-btn', true);
+  clearLoginMessages();
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
+  setLoginLoading('rs-btn', false);
+  if (error) { showLoginError('❌ ' + (error.message || 'Σφάλμα')); return; }
+  showLoginInfo('✅ Στάλθηκε email επαναφοράς κωδικού!');
+}
+
+async function doSignOut() {
+  if (supabaseClient) await supabaseClient.auth.signOut();
+  currentUser = null;
+  document.getElementById('app-wrapper').style.display = 'none';
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('user-dropdown').classList.remove('open');
+  document.getElementById('si-pass').value = '';
+  clearLoginMessages();
+  showToast('👋 Αποσυνδέθηκες.');
+}
+
+function onAuthSuccess(user) {
+  currentUser = user;
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-wrapper').style.display = 'block';
+  // Update user button
+  const email = user.email || '';
+  const initials = email.slice(0,2).toUpperCase();
+  document.getElementById('user-avatar').textContent = initials;
+  document.getElementById('user-email-label').textContent = email.length > 18 ? email.slice(0,15) + '…' : email;
+  // Close dropdown
+  document.getElementById('user-dropdown').classList.remove('open');
+}
+
+function toggleUserMenu(e) {
+  e.stopPropagation();
+  document.getElementById('user-dropdown').classList.toggle('open');
+}
+document.addEventListener('click', () => {
+  const d = document.getElementById('user-dropdown');
+  if (d) d.classList.remove('open');
+});
+
+// ════════════════════════════════════════════════════
+// ΕΚΚΙΝΗΣΗ
+// ════════════════════════════════════════════════════
+(async function init() {
+  setupPWAManifest();
+  registerServiceWorker();
+
+  // Φόρτωση αποθηκευμένης Supabase σύνδεσης
+  const savedUrl = localStorage.getItem(SUPA_URL_KEY);
+  const savedKey = localStorage.getItem(SUPA_KEY_KEY);
+  if (savedUrl && savedKey && window.supabase) {
+    setSyncStatus('syncing');
+    const ok = await initSupabase(savedUrl, savedKey);
+    if (!ok) {
+      supabaseClient = null;
+      setSyncStatus('local');
+      showToast('⚠️ Δεν ήταν δυνατή η σύνδεση Supabase — τοπική λειτουργία.', true);
+    } else {
+      // Έλεγχος υπάρχουσας session
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session?.user) {
+        onAuthSuccess(session.user);
+      }
+      // Παρακολούθηση αλλαγών auth state
+      supabaseClient.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' && session?.user && !currentUser) {
+          onAuthSuccess(session.user);
+        } else if (event === 'SIGNED_OUT') {
+          currentUser = null;
+        }
+      });
+    }
+  }
+
+  await loadData();
+  renderClients();
+})();
+</script>
+
+<!--
+══════════════════════════════════════════════════════════════
+  SERVICE WORKER — Αποθηκεύστε ως "sw.js" στον ίδιο φάκελο
+══════════════════════════════════════════════════════════════
+
+const CACHE = 'greencut-v2';
+const ASSETS = ['./', './greencut-pro-v2.html',
+  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
+  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js'];
+
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting()));
+});
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
+});
+self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url);
+  if (url.hostname.includes('supabase.co') || url.hostname.includes('openstreetmap') || url.hostname.includes('nominatim')) {
+    e.respondWith(fetch(e.request).catch(()=>new Response('Offline',{status:503})));
+    return;
+  }
+  e.respondWith(caches.match(e.request).then(cached=>cached||fetch(e.request).then(r=>{
+    if(r.ok){const cl=r.clone();caches.open(CACHE).then(c=>c.put(e.request,cl));}
+    return r;
+  })));
+});
+-->
+</body>
+</html>
